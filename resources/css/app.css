@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body,
+html {
+    margin: 0;
+    padding: 0;
+}
+.custom-btn {
+    /* Establece el ancho y alto deseado para los elementos */
+    width: 150px;
+    height: 65px; /* Ajusta este valor según tus preferencias */
+    line-height: 15px;
+}
+
+.fondocolor {
+    background-color: #22374f;
+}
+
+.imagenfondo {
+    background-image: url("../../public/images/vortex-image.jpg");
+    min-height: 666px;
+}
