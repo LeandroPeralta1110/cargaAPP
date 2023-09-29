@@ -24,8 +24,6 @@ class CargaArchivo extends Component
     public $totalImporteTipo2;
     public $contadorRegistrosTipo2 = 0;
 
-    public $cargandoArchivo = false;
-
     public $archivo;
     public $contenido;
     public $mostrarDatosAltaProveedor = false; // Agrega una propiedad para controlar la animación
@@ -47,7 +45,7 @@ class CargaArchivo extends Component
         $this->validate([
             'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
         ]);
-
+        $this->mostrarDatosAltaProveedor = false;
         // Obtener el contenido del archivo
         $contenido = file_get_contents($this->archivo->getRealPath());
 
@@ -66,7 +64,7 @@ class CargaArchivo extends Component
     }
 
     public function procesarArchivoTipo1CSVoTXT($lineas){
-        $this->cargandoArchivo = true;
+        
         foreach ($lineas as $linea) {
             $datos = str_getcsv($linea, ','); // Dividir la línea en elementos usando la coma como separador
 
@@ -126,18 +124,11 @@ class CargaArchivo extends Component
                 ];
             }
         }
-
-        $this->cargandoArchivo = false;
-
-        // Establecer $mostrarDatos solo si se cargaron datos en la sección "Alta a Proveedores"
-        if ($this->seccionSeleccionada === 'alta_proveedor') {
-            $this->mostrarDatosAltaProveedor = true;
-        }
+        $this->mostrarDatosAltaProveedor = true;
     }
 
     public function procesarArchivoExcel($archivo)
     {   
-        $this->cargandoArchivo = true;
         $spreadsheet = IOFactory::load($archivo);
         $worksheet = $spreadsheet->getActiveSheet();
         $datos = [];
@@ -184,7 +175,6 @@ class CargaArchivo extends Component
                 ];
         }
     }
-    $this->cargandoArchivo = false;
     // Establecer $mostrarDatos solo si se cargaron datos en la sección "Alta a Proveedores"
     if ($this->seccionSeleccionada === 'alta_proveedor') {
         $this->mostrarDatosAltaProveedor = true;
@@ -198,8 +188,6 @@ class CargaArchivo extends Component
             'archivo' => 'required|mimes:csv,txt,XLSX|max:2048',
         ]);
         
-        $this->cargandoArchivo = true;
-
         // Obtener el contenido del archivo
         $contenido = file_get_contents($this->archivo->getRealPath());
 
@@ -290,8 +278,6 @@ class CargaArchivo extends Component
                 }
             }
         }
-        $this->cargandoArchivo = false;
-
         $this->mostrarDatosTipo1 = true;
     }
 
@@ -300,8 +286,6 @@ class CargaArchivo extends Component
         $this->validate([
             'archivo' => 'required|mimes:csv,txt,XLSX|max:2048',
         ]);
-
-        $this->cargandoArchivo = true;
 
         // Obtener el contenido del archivo
         $contenido = file_get_contents($this->archivo->getRealPath());
@@ -424,7 +408,6 @@ class CargaArchivo extends Component
             }
         }
         // Guardar el total de importe para su uso posterior
-        $this->cargandoArchivo = false;
         $this->totalImporteTipo2 = $totalImporte;
         $this->mostrarDatosTipo2 = true;
 
@@ -437,7 +420,6 @@ class CargaArchivo extends Component
     
     public function cargaArchivoTipo3()
     {
-        $this->cargandoArchivo = true;
             // Verificar si se obtuvieron datos válidos
                 $tipoRegistro = "3";
 
@@ -511,7 +493,6 @@ class CargaArchivo extends Component
                         'filler' => $filler,
                     ];
             // Puedes mostrar los datos en tu vista, estableciendo una variable de bandera, por ejemplo:
-            $this->cargandoArchivo = false;
             $this->mostrarDatosTipo3 = true; 
     }
 

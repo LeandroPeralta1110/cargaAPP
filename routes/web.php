@@ -16,13 +16,3 @@ use App\Http\Livewire\CargaArchivo;
 */
 
 Route::get('/', CargaArchivo::class)->name('cargar-archivo');
-
-Route::middleware([
-    'auth:sanctum',
-    config('jetstream.auth_session'),
-    'verified'
-])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
-});

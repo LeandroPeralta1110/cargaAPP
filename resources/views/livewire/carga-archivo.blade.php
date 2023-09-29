@@ -57,12 +57,6 @@
 
                     
                     <!-- Contenido del Archivo (Mostrado si hay contenido) -->
-                    <div>
-                        <!-- Animación de carga -->
-                        @if ($cargandoArchivo)
-                            <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto my-8"></div>
-                        @endif
-                    </div>
                     <div class="fondocolor p-6">
                         <div class="transition-all duration-500 ease-in-out" x-show="mostrarDatosTipo1">
                         @if ($mostrarDatosTipo1)
@@ -256,12 +250,6 @@
                     <!-- Contenido del Archivo (Mostrado si hay contenido) -->
                     <div class="fondocolor p-6" wire:transition.opacity.duration.500ms.ease-in-out
                         x-data="{ isOpen: false }">
-                        <div>
-                            <!-- Animación de carga -->
-                            @if ($cargandoArchivo)
-                                <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto my-8"></div>
-                            @endif
-                        </div>
                         @if ($mostrarDatosTipo2)
                             <p class="text-white text-sm font-medium text-gray-600">
                                 {{ count($datosProcesadosTipo2) }} filas con datos encontrados
@@ -461,12 +449,6 @@
                     <!-- Contenido del Archivo (Mostrado si hay contenido) -->
                     <div class="fondocolor p-6" wire:transition.opacity.duration.500ms.ease-in-out
                         x-data="{ isOpen: false }">
-                        <div>
-                            <!-- Animación de carga -->
-                            @if ($cargandoArchivo)
-                                <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto my-8"></div>
-                            @endif
-                        </div>
                         @if ($mostrarDatosTipo3)
                             <p class="text-white text-sm font-medium text-gray-600">
                                 {{ count($datosProcesadosTipo3) }} filas con datos encontrados
@@ -636,13 +618,9 @@
                         </div>
 
                         <!-- Contenido del Archivo (Mostrado si hay contenido) -->
-                        <div class="fondocolor p-6" wire:transition.opacity.duration.500ms.ease-in-out
-                            x-data="{ isOpen: false }">
+                        <div class="fondocolor p-6">
                                 <!-- Animación de carga -->
-                                @if ($cargandoArchivo)
-                                    <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto my-8"></div>
-                                @endif
-                            @if ($mostrarDatosAltaProveedor)
+                                @if ($mostrarDatosAltaProveedor)
                                 <p class="text-white text-sm font-medium text-gray-600">
                                     {{ count($datosAltaProveedor) }} filas con datos encontrados
                                 </p>
