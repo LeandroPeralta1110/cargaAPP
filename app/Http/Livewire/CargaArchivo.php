@@ -19,10 +19,21 @@ class CargaArchivo extends Component
     public $datosProcesadosTipo3 = [];
     public $datosProcesados = [];
     public $datosParaTipo3 =[];
+    public $registrosArchivos = [];
+    public $nombreArchivo= [];
+    public $datosArchivo= [];
+    public $ultimoRegistro = [];
+    public $ultimosRegistros = [];
+    public $registrosArchivosTipo1 = [];
+    public $registrosArchivosTipo2 = [];
+
+    public $ultimoArchivo = []; // Agrega esta propiedad
+    public $cantidadDatos = 0;  // Agrega esta propiedad
 
     public $ultimaFilaTipo3=[];
     public $totalImporteTipo2;
     public $contadorRegistrosTipo2 = 0;
+    public $contadorRegistrosAltaProveedores = 0;
 
     public $archivo;
     public $contenido;
@@ -59,12 +70,12 @@ class CargaArchivo extends Component
             $this->procesarArchivoTipo1CSVoTXT($lineas);
         }elseif($extension === 'xlsx'){
              // Cargar el archivo Excel y obtener sus datos
-        $datos = $this->procesarArchivoExcel($this->archivo);
+            $this->procesarArchivoExcel($this->archivo);
         }
     }
 
     public function procesarArchivoTipo1CSVoTXT($lineas){
-        
+        $datosArchivoActual = [];
         foreach ($lineas as $linea) {
             $datos = str_getcsv($linea, ','); // Dividir la línea en elementos usando la coma como separador
 
@@ -122,8 +133,27 @@ class CargaArchivo extends Component
                     'email' => $email,
                     'titulares' => $titulares,
                 ];
+
+                $datosArchivoActual[] = [
+                    'cbu' => $cbu,
+                    'alias' => $alias,
+                    'id_tipo' => $idTipo,
+                    'clave_cuenta' => $claveCuenta,
+                    'tipo_cuenta' => $tipoCuenta,
+                    'referencia_cuenta' => $referenciaCuenta,
+                    'email' => $email,
+                    'titulares' => $titulares,
+                ];
             }
         }
+        // Almacenar los últimos registros procesados en $ultimosRegistros
+        $this->ultimosRegistros = $datosArchivoActual;
+
+        $this->registrosArchivos[] = [
+            'nombre_archivo' => $this->archivo->getClientOriginalName(),
+            'tipo_registro' => 'Alta Proveedores',
+            'datos' => $datosArchivoActual, // Almacena los datos procesados del archivo actual
+        ];
         $this->mostrarDatosAltaProveedor = true;
     }
 
@@ -173,8 +203,25 @@ class CargaArchivo extends Component
                     'email' => $email,
                     'titulares' => $titulares,
                 ];
+
+                $datosArchivoActual[] = [
+                    'cbu' => $cbu,
+                    'alias' => $alias,
+                    'id_tipo' => $idTipo,
+                    'clave_cuenta' => $claveCuenta,
+                    'tipo_cuenta' => $tipoCuenta,
+                    'referencia_cuenta' => $referenciaCuenta,
+                    'email' => $email,
+                    'titulares' => $titulares,
+                ];
         }
     }
+    
+    $this->registrosArchivos[] = [
+        'nombre_archivo' => $this->archivo->getClientOriginalName(),
+        'tipo_registro' => 'Alta Proveedores',
+        'datos' => $datosArchivoActual, // Almacena los datos procesados del archivo actual
+    ];
     // Establecer $mostrarDatos solo si se cargaron datos en la sección "Alta a Proveedores"
     if ($this->seccionSeleccionada === 'alta_proveedor') {
         $this->mostrarDatosAltaProveedor = true;
@@ -275,9 +322,33 @@ class CargaArchivo extends Component
                         'casa_envio_rendicion' => $casaEnvioRendicion,
                         'filler2' => $filler2,
                     ];
+                    $datosArchivoActual[] = [
+                        'tipo_registro' => $tipoRegistro,
+                        'cuit_empresa' => $cuitEmpresa,
+                        'codigo_sucursal' => $codigoSucursal,
+                        'cbu_deseado' => $cbuDeseado,
+                        'moneda' => $moneda,
+                        'fecha_pago' => $fechaPago,
+                        'info_criterio_empresa' => $infoCriterioEmpresa,
+                        'tipo_pago' => $tipoPago,
+                        'clase_pagos' => $clasePagos,
+                        'codigo_convenio' => $codigoConvenio,
+                        'numero_envio' => $numeroEnvio,
+                        'sistema_original' => $sistemaOriginal,
+                        'filler' => $filler,
+                        'casa_envio_rendicion' => $casaEnvioRendicion,
+                        'filler2' => $filler2,
+                    ];
                 }
             }
         }
+        $this->registrosArchivos[] = [
+            'nombre_archivo' => $this->archivo->getClientOriginalName(),
+            'tipo_registro' => 'Registros tipo 1',
+            'datos' => $datosArchivoActual, // Almacena los datos procesados del archivo actual
+        ];
+
+        $this->registrosArchivosTipo1 = $this->registrosArchivos;
         $this->mostrarDatosTipo1 = true;
     }
 
@@ -402,11 +473,38 @@ class CargaArchivo extends Component
                         'total_importe' => $totalImporte,
                         'total_registros' => $contadorRegistrosTipo2,
                         // ... (otros campos para Tipo 3)
-                    ]; 
+                    ];     
                     
+                    $datosArchivoActual[] = [
+                        'tipo_registro' => $tipoRegistro,
+                        'entidad_acreditar' => $entidad,
+                        'sucursal_acreditar' => $sucursal,
+                        'digito_acreditar_bloque1' => $bloque1,
+                        'digito_acreditar_cbu_bloque2' => $bloque2,
+                        'importe' => $importe,
+                        'referencia' => $referencia,
+                        'identificacion_cliente' => $identificacionCliente,
+                        'clase_documento' => $claseDocumento,
+                        'tipo_documento' => $tipoDocumento,
+                        'nro_documento' => $documentoBeneficiario,
+                        'estado' => $estado,
+                        'datos_empresa' => $datosEmpresa,
+                        'identificador_prestamo' => $identificadorPrestamo,
+                        'nro_operacion_link' => $operacionLink,
+                        'sucursal_acreditar_BNA' => $sucursalAcreditarBNA,
+                        'numero_registro_link' => $numeroRegistroLink,
+                        'observaciones' => $observaciones,
+                        'filler' => $filler,
+                    ];
                 }
             }
         }
+        $this->registrosArchivos[] = [
+            'nombre_archivo' => $this->archivo->getClientOriginalName(),
+            'tipo_registro' => 'Registros tipo 2',
+            'datos' => $datosArchivoActual, // Almacena los datos procesados del archivo actual
+        ];
+
         // Guardar el total de importe para su uso posterior
         $this->totalImporteTipo2 = $totalImporte;
         $this->mostrarDatosTipo2 = true;
@@ -692,6 +790,114 @@ class CargaArchivo extends Component
     {
         $this->pagina--;
     }
+
+    public function eliminarUltimosDatos()
+{
+    // Busca el último archivo de "Alta Proveedores" en la lista de registrosArchivos
+    $ultimoIndice = $this->findLastIndexByTipoRegistro('Alta Proveedores');
+
+    // Verifica si se encontró el último archivo
+    if ($ultimoIndice !== null) {
+        // Obtiene los datos del último archivo de "Alta Proveedores"
+        $ultimosRegistros = $this->registrosArchivos[$ultimoIndice]['datos'];
+
+        // Elimina los registros del último archivo de "Alta Proveedores" de la lista de datosAltaProveedor
+        foreach ($ultimosRegistros as $registro) {
+            $index = array_search($registro, $this->datosAltaProveedor);
+            if ($index !== false) {
+                unset($this->datosAltaProveedor[$index]);
+            }
+        }
+
+        // Limpia los elementos eliminados
+        $this->datosAltaProveedor = array_values($this->datosAltaProveedor);
+
+        // Elimina el último archivo de "Alta Proveedores" de la lista de registrosArchivos
+        unset($this->registrosArchivos[$ultimoIndice]);
+        $this->registrosArchivos = array_values($this->registrosArchivos);
+
+        // Realiza cualquier otra lógica necesaria después de eliminar los registros
+
+        // Puedes agregar un mensaje de éxito o redireccionar según tus necesidades
+    }
+}
+
+public function eliminarUltimoArchivoTipo1()
+{
+    // Busca el último archivo de "Registros Tipo 1" en la lista de registrosArchivos
+    $ultimoIndice = $this->findLastIndexByTipoRegistro('Registros tipo 1');
+
+    // Verifica si se encontró el último archivo
+    if ($ultimoIndice !== null) {
+        // Obtiene los datos del último archivo de "Registros Tipo 1"
+        $ultimosRegistros = $this->registrosArchivos[$ultimoIndice]['datos'];
+
+        // Elimina los registros del último archivo de "Registros Tipo 1" de la lista de datosProcesadosTipo1
+        foreach ($ultimosRegistros as $registro) {
+            $index = array_search($registro, $this->datosProcesadosTipo1);
+            if ($index !== false) {
+                unset($this->datosProcesadosTipo1[$index]);
+            }
+        }
+
+        // Limpia los elementos eliminados
+        $this->datosProcesadosTipo1 = array_values($this->datosProcesadosTipo1);
+
+        // Elimina el último archivo de "Registros Tipo 1" de la lista de registrosArchivos
+        unset($this->registrosArchivos[$ultimoIndice]);
+        $this->registrosArchivos = array_values($this->registrosArchivos);
+
+        // Realiza cualquier otra lógica necesaria después de eliminar los registros
+
+        // Puedes agregar un mensaje de éxito o redireccionar según tus necesidades
+    }
+}
+
+
+public function eliminarUltimosDatosTipo2()
+{
+    // Busca el último archivo de "Registros Tipo 2" en la lista de registrosArchivos
+    $ultimoIndice = $this->findLastIndexByTipoRegistro('Registros tipo 2');
+
+    // Verifica si se encontró el último archivo
+    if ($ultimoIndice !== null) {
+        // Obtiene los datos del último archivo de "Registros Tipo 2"
+        $ultimosRegistros = $this->registrosArchivos[$ultimoIndice]['datos'];
+
+        // Elimina los registros del último archivo de "Registros Tipo 2" de la lista de datosProcesadosTipo2
+        foreach ($ultimosRegistros as $registro) {
+            $index = array_search($registro, $this->datosProcesadosTipo2);
+            if ($index !== false) {
+                unset($this->datosProcesadosTipo2[$index]);
+            }
+        }
+
+        // Limpia los elementos eliminados
+        $this->datosProcesadosTipo2 = array_values($this->datosProcesadosTipo2);
+
+        // Elimina el último archivo de "Registros Tipo 2" de la lista de registrosArchivos
+        unset($this->registrosArchivos[$ultimoIndice]);
+        $this->registrosArchivos = array_values($this->registrosArchivos);
+
+        // Realiza cualquier otra lógica necesaria después de eliminar los registros
+
+        // Puedes agregar un mensaje de éxito o redireccionar según tus necesidades
+    }
+}
+
+// Función auxiliar para encontrar el último índice de un tipo de registro específico
+private function findLastIndexByTipoRegistro($tipoRegistro)
+{
+    $ultimoIndice = null;
+    for ($i = count($this->registrosArchivos) - 1; $i >= 0; $i--) {
+        if ($this->registrosArchivos[$i]['tipo_registro'] === $tipoRegistro) {
+            $ultimoIndice = $i;
+            break;
+        }
+    }
+    return $ultimoIndice;
+}
+
 
     public function render()
     {

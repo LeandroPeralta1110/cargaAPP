@@ -8,11 +8,11 @@
         <title>Vortex</title>
 
         <link rel="icon" href="{{ asset('./images/tornado-icon.jpg') }}" type="image/x-icon"">
-
+        <link href="{{ asset('build/assets/app.css') }}" rel="stylesheet">
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-        <link rel="stylesheet" href="./css/app.css">
+        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet"/>
+        
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -23,7 +23,7 @@
     <body class="font-sans antialiased">
         <x-banner />
 
-        <div class="min-h-screen bg-gray-100">
+        <div class=" bg-gray-100">
             @livewire('navigation-menu')
             
             <!-- Page Content -->
@@ -31,23 +31,26 @@
                 {{ $slot }}
             </main>
         </div>
+        
+        <div id="footer" class="hidden bg-gray-200 text-center py-2">
+            Desarrollado por el Área de Sistemas Ivess-ElJumillano &copy; {{ date('Y') }}
+        </div>
 
         @stack('modals')
 
         @livewireScripts
+        <script src="{{ asset('build/assets/app.js') }}"></script>
         <script>
-              var tablaDataTable = null;
-
-            function inicializarDataTable() {
-                if (tablaDataTable !== null) {
-                    tablaDataTable.clear().destroy();
+            // JavaScript para mostrar el pie de página cuando se desplaza el contenido
+            window.addEventListener('scroll', function() {
+                var footer = document.getElementById('footer');
+                if (footer) {
+                    if (window.scrollY + window.innerHeight >= footer.offsetTop) {
+                        footer.style.display = 'block';
+                    } else {
+                        footer.style.display = 'none';
+                    }
                 }
-
-                tablaDataTable = $('#miTabla').DataTable();
-            }
-
-            $(document).ready(function() {
-                inicializarDataTable();
             });
         </script>
     </body>
