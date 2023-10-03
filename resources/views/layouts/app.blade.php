@@ -33,7 +33,7 @@
         </div>
         
         <div id="footer" class="hidden bg-gray-200 text-center py-2">
-            Desarrollado por el Área de Sistemas Ivess-ElJumillano &copy; {{ date('Y') }}
+            Área de Sistemas Ivess-ElJumillano &copy; {{ date('Y') }}
         </div>
 
         @stack('modals')

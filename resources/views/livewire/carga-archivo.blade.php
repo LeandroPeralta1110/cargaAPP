@@ -304,7 +304,7 @@
                                 </div>
                                 <div class="p-2">
                                     <form wire:submit.prevent="eliminarUltimosDatosTipo2">
-                                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md mt-4">
+                                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md">
                                             Volver
                                         </button>
                                     </form>
@@ -316,75 +316,31 @@
                                         <tr>
                                             <th
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                REGISTRO
+                                                CODIGO
                                             </th>
                                             <th
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                ENTIDAD ACREDITAR
+                                                RAZON SOCIAL
                                             </th>
                                             <th
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                SUCURSAL ACREDITAR
+                                                DOCUMENTO
                                             </th>
                                             <th
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                DIGITO VERIFICADOR
+                                                COMPROBANTE EMISION
                                             </th>
                                             <th
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                CBU
+                                                COMPROBANTE
                                             </th>
                                             <th
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                IMPORTE
+                                                COMPROBANTE IMPORTE
                                             </th>
                                             <th
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                REFERENCIA
-                                            </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                IDENTIFICACION CLIENTE
-                                            </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                CLASE DE DOCUMENTO
-                                            </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                TIPO DE DOCUMENTO
-                                            </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                NRO. DOCUMENTO
-                                            </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                ESTADO
-                                            </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                DATOS DE LA EMPRESA
-                                            </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                IDENTIFICADOR PRESTAMO
-                                            </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                NRO. OPERACION LINK
-                                            </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                SUCURSAL ACREDITAR ORIGINAL
-                                            </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                NUMERO DE REGISTRO LINK
-                                            </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                OBSERVACIONES
+                                                VENCIMIENTO
                                             </th>
                                         </tr>
                                     </thead>
@@ -396,55 +352,22 @@
                                                         {{ $fila['tipo_registro'] }}
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['entidad_acreditar'] }}
+                                                        <?php echo isset($fila['nombre']) ? $fila['nombre'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['sucursal_acreditar'] }}
+                                                        <?php echo isset($fila['documento']) ? $fila['documento'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['digito_acreditar_bloque1'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['digito_acreditar_cbu_bloque2'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['importe'] }}
+                                                        <?php echo isset($fila['fecha']) ? $fila['fecha'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
                                                         {{ $fila['referencia'] }}
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['identificacion_cliente'] }}
+                                                        {{ $fila['importe_formateado'] }}
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['clase_documento'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['tipo_documento'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['nro_documento'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['estado'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['datos_empresa'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['identificador_prestamo'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['nro_operacion_link'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['sucursal_acreditar_BNA'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['numero_registro_link'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['observaciones'] }}
+                                                        {{ $fila['fecha2'] }}
                                                     </td>
                                                 </tr>
                                             @endif
@@ -683,7 +606,7 @@
                                     </div>
                                     <div class="p-2">
                                         <form wire:submit.prevent="eliminarUltimosDatos">
-                                            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md mt-4">
+                                            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md">
                                                 Volver
                                             </button>
                                         </form>

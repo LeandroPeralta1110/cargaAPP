@@ -11,6 +11,7 @@ class CargaArchivo extends Component
     use WithFileUploads;
 
     protected $listeners = ['datosTipo2Cargados' => 'cargaArchivoTipo3'];
+    protected $identificador;
 
     public $datosAltaProveedor = [];
     public $datosArchivoPago = [];
@@ -26,6 +27,8 @@ class CargaArchivo extends Component
     public $ultimosRegistros = [];
     public $registrosArchivosTipo1 = [];
     public $registrosArchivosTipo2 = [];
+    public $identificadorUnicoCargadoTipo2;
+    public $datosCargadosTipo2 = [];
 
     public $ultimoArchivo = []; // Agrega esta propiedad
     public $cantidadDatos = 0;  // Agrega esta propiedad
@@ -214,8 +217,8 @@ class CargaArchivo extends Component
                     'email' => $email,
                     'titulares' => $titulares,
                 ];
+            }
         }
-    }
     
     $this->registrosArchivos[] = [
         'nombre_archivo' => $this->archivo->getClientOriginalName(),
@@ -347,185 +350,107 @@ class CargaArchivo extends Component
             'tipo_registro' => 'Registros tipo 1',
             'datos' => $datosArchivoActual, // Almacena los datos procesados del archivo actual
         ];
-
         $this->registrosArchivosTipo1 = $this->registrosArchivos;
         $this->mostrarDatosTipo1 = true;
     }
 
     public function cargaArchivoTipo2()
-    {
-        $this->validate([
-            'archivo' => 'required|mimes:csv,txt,XLSX|max:2048',
-        ]);
+{
+    $this->validate([
+        'archivo' => 'required|mimes:csv,txt,xlsx|max:2048', // Cambié 'XLSX' a 'xlsx'
+    ]);
 
-        // Obtener el contenido del archivo
-        $contenido = file_get_contents($this->archivo->getRealPath());
+    // Obtener el contenido del archivo
+    $contenido = file_get_contents($this->archivo->getRealPath());
 
-        // Procesar el contenido del archivo CSV o TXT
-        $lineas = explode("\n", $contenido);
+    // Procesar el contenido del archivo CSV o TXT
+    $lineas = explode("\n", $contenido);
+    $totalImporte = 0;
+    $datosCargadosTemporal = [];
+    $contadorRegistrosTipo2 = 0;
+    $identificadorUnico = uniqid();
+    $totalImporteTipo2Formateado = 0;
+    $identificadorTipo2 = uniqid();
 
-        $totalImporte = 0;
-        $importe = 0;
+    // Definir $datosParaTipo3 como un array vacío
+    $datosParaTipo3 = [];
 
-        $datosParaTipo3 = [];
-        $contadorRegistrosTipo2= 0;
+    foreach ($lineas as $linea) {
+        // Dividir la línea en elementos usando el punto y coma como separador
+        $datos = explode(';', $linea);
 
-        foreach ($lineas as $linea) {
-            // Dividir la línea en elementos usando la coma como separador (para CSV)
-            // O usar explode con tabulación "\t" si es un archivo de texto (TXT)
-            $datos = str_getcsv($linea, ',');
+        // Verificar si se obtuvieron datos válidos
+        if (count($datos) >= 8) {
+            $importeOriginal = $datos[5];
 
-            // Verificar si se obtuvieron datos válidos
-            if (count($datos) >= 3) {
-                $tipoRegistro = '2';
-                $entidad = str_pad($datos[0], 4, '0', STR_PAD_LEFT);
-                $sucursal = str_pad($datos[1], 4, '0', STR_PAD_LEFT);
-                $cbu = $datos[2];
-                // Eliminar el carácter "-"
-                // Dividir la cadena en función del guion "-"
-                $bloques = explode("-", $cbu);
+            // Elimina el símbolo "$" y las comas de la cadena de importe
+            $importeLimpio = str_replace(['$', ','], '', $importeOriginal);
 
-                // $bloques[0] contendrá el bloque 1 (número a la izquierda del "-")
-                $bloque1 = substr($bloques[0], -1);
+            // Convierte la cadena en un número entero positivo
+            $importeEntero = abs((int)$importeLimpio);
 
-                // $bloques[1] contendrá el bloque 2 (resto del CBU)
-                $bloque2 = $bloques[1];
+            // Divide el número por 100 para obtener el valor en dólares y centavos
+            $importeDecimal = $importeEntero / 100;
 
-               // Obtener el importe con comas y símbolo de dólar
-                $importeConComas = $datos[3];
+            // Formatea el número como moneda, agregando el símbolo de moneda al inicio
+            $importeFormateado = "$" . number_format($importeDecimal, 2, ',', '.');
 
-                // Utilizar una expresión regular para extraer el valor numérico
-                if (preg_match('/\$([\d,.]+)/', $importeConComas, $matches)) {
-                    // El valor numérico se encuentra en $matches[1]
-                    $valorNumerico = str_replace([',', '$','.'], '', $matches[1]);
+            $datosCargadosTemporal[] = [
+                'identificador_unico' => $identificadorTipo2,
+                'tipo_registro' => $datos[0],
+                'nombre' => $datos[1],
+                'documento' => $datos[2],
+                'fecha' => $datos[3],
+                'referencia' => $datos[4],
 
-                    // Convertir el valor en un número entero
-                    $importe = (int) $valorNumerico;
-                }
-                
-                // Sumar el importe al total
-                $totalImporte += $importe;
-                
-                // Obtener la referencia y completar con ceros solo si está vacía
-                $referencia = empty($datos[4]) ? str_pad('', 15, '0') : $datos[4];
+                // Elimina el símbolo "$" y las comas de la cadena de importe
+                'importe' => (float) str_replace(['$', ','], '', $datos[5]),
 
-                // Identificación del cliente (con longitud fija de 22)
-                // Se compone de un dígito 1(CUIT) O 2(CUIL) O 3(CDI) + número de clave fiscal
-                // Eliminar caracteres especiales y espacios en blanco
-                $identificacionCliente = preg_replace('/[^0-9a-zA-Z]/', '', $datos[5]);
+                'fecha2' => $datos[6],
+                'importe_formateado' => $importeFormateado,
+            ];
 
-                // Completar con espacios en blanco para llenar la longitud de 22
-                $identificacionCliente = str_pad($identificacionCliente, 22, ' ');
-
-                // clase de documento, se completa con 0 longitud 1
-                $claseDocumento = "0";
-
-                // tipo de documento, se completa con 00 longitud 2
-                $tipoDocumento = "00";
-
-                // documento del beneficiario, completar con 0 11 digitos
-                $documentoBeneficiario = str_repeat('0', 11);
-
-                $estado = "00";
-
-                $datosEmpresa = empty($datos[6]) ? str_pad('', 13, '0') : $datos[6];
-
-                $identificadorPrestamo = $datos[7];
-
-                // numero operacion link uso BNA. longitud 9, completar con 0
-                $operacionLink = str_repeat('0', 9);
-
-                // uso BNA.
-                $sucursalAcreditarBNA = str_repeat('0', 4);
-
-                $numeroRegistroLink = str_repeat('0', 6);
-
-                $observaciones = str_repeat('0', 15);
-
-                $filler = str_repeat('0', 62);
-
-                if ($this->seccionSeleccionada === 'registro_tipo_2') {
-                    // Agregar los datos procesados al array
-                    $this->datosProcesadosTipo2[] = [
-                        'tipo_registro' => $tipoRegistro,
-                        'entidad_acreditar' => $entidad,
-                        'sucursal_acreditar' => $sucursal,
-                        'digito_acreditar_bloque1' => $bloque1,
-                        'digito_acreditar_cbu_bloque2' => $bloque2,
-                        'importe' => $importe,
-                        'referencia' => $referencia,
-                        'identificacion_cliente' => $identificacionCliente,
-                        'clase_documento' => $claseDocumento,
-                        'tipo_documento' => $tipoDocumento,
-                        'nro_documento' => $documentoBeneficiario,
-                        'estado' => $estado,
-                        'datos_empresa' => $datosEmpresa,
-                        'identificador_prestamo' => $identificadorPrestamo,
-                        'nro_operacion_link' => $operacionLink,
-                        'sucursal_acreditar_BNA' => $sucursalAcreditarBNA,
-                        'numero_registro_link' => $numeroRegistroLink,
-                        'observaciones' => $observaciones,
-                        'filler' => $filler,
-                    ];
-
-                        // Agregar los datos necesarios para Tipo 3 al arreglo
-                    $this->datosParaTipo3[] = [
-                        'total_importe' => $totalImporte,
-                        'total_registros' => $contadorRegistrosTipo2,
-                        // ... (otros campos para Tipo 3)
-                    ];     
-                    
-                    $datosArchivoActual[] = [
-                        'tipo_registro' => $tipoRegistro,
-                        'entidad_acreditar' => $entidad,
-                        'sucursal_acreditar' => $sucursal,
-                        'digito_acreditar_bloque1' => $bloque1,
-                        'digito_acreditar_cbu_bloque2' => $bloque2,
-                        'importe' => $importe,
-                        'referencia' => $referencia,
-                        'identificacion_cliente' => $identificacionCliente,
-                        'clase_documento' => $claseDocumento,
-                        'tipo_documento' => $tipoDocumento,
-                        'nro_documento' => $documentoBeneficiario,
-                        'estado' => $estado,
-                        'datos_empresa' => $datosEmpresa,
-                        'identificador_prestamo' => $identificadorPrestamo,
-                        'nro_operacion_link' => $operacionLink,
-                        'sucursal_acreditar_BNA' => $sucursalAcreditarBNA,
-                        'numero_registro_link' => $numeroRegistroLink,
-                        'observaciones' => $observaciones,
-                        'filler' => $filler,
-                    ];
-                }
-            }
+            // Incrementar el contador de registros Tipo 2
+            $contadorRegistrosTipo2++;
         }
-        $this->registrosArchivos[] = [
-            'nombre_archivo' => $this->archivo->getClientOriginalName(),
-            'tipo_registro' => 'Registros tipo 2',
-            'datos' => $datosArchivoActual, // Almacena los datos procesados del archivo actual
-        ];
-
-        // Guardar el total de importe para su uso posterior
-        $this->totalImporteTipo2 = $totalImporte;
-        $this->mostrarDatosTipo2 = true;
-
-            // Asignar los datos a la propiedad $datosParaTipo3 antes de emitir el evento
-        $this->datosParaTipo3 = $datosParaTipo3;
-
-        // Emitir un evento con los datos para cargaArchivoTipo3
-        $this->emit('datosTipo2Cargados', $this->totalImporteTipo2, $contadorRegistrosTipo2);
     }
-    
+
+    // Al final del procesamiento exitoso, agregar los datos cargados a $this->datosProcesadosTipo2
+    $this->datosProcesadosTipo2 = array_merge($this->datosProcesadosTipo2, $datosCargadosTemporal);
+    $this->datosCargadosTipo2 = $datosCargadosTemporal;
+
+    // Almacena el identificador único en una propiedad de clase
+    $this->identificadorUnicoCargadoTipo2 = $identificadorUnico;
+
+    $this->registrosArchivos[] = [
+        'identificador_unico' => $identificadorUnico,
+        'nombre_archivo' => $this->archivo->getClientOriginalName(),
+        'tipo_registro' => 'Registros tipo 2',
+        'datos' => $datosCargadosTemporal, // Almacena los datos procesados del archivo actual
+    ];
+
+    // Guardar el total de importe para su uso posterior
+    $this->totalImporteTipo2 = $totalImporte;
+    $this->mostrarDatosTipo2 = true;
+
+    // Asignar los datos a la propiedad $datosParaTipo3 antes de emitir el evento
+    $this->datosParaTipo3 = $datosParaTipo3;
+
+    // Emitir un evento con los datos para cargaArchivoTipo3
+    $this->emit('datosTipo2Cargados', $this->totalImporteTipo2, $contadorRegistrosTipo2);
+}
+     
     public function cargaArchivoTipo3()
     {
             // Verificar si se obtuvieron datos válidos
-                $tipoRegistro = "3";
+            $tipoRegistro = "3";
 
-                // Obtener los datos acumulados de cargaArchivoTipo2
-                $datosTipo2 = $this->datosProcesadosTipo2;
+            // Obtener los datos acumulados de cargaArchivoTipo2
+            $datosTipo2 = $this->datosProcesadosTipo2;
 
-                $totalImporteTipo2 = 0;
-                $totalRegistrosTipo2 = 0;
+            $totalImporteTipo2 = 0;
+            $totalRegistrosTipo2 = 0;
+            $totalImporteTipo2Formateado = '0';
 
                 // Calcular el total de importe y registros de cargaArchivoTipo2
                 foreach ($datosTipo2 as $dato) {
@@ -534,9 +459,11 @@ class CargaArchivo extends Component
                     $totalImporteTipo2Formateado = number_format($totalImporteTipo2, 2, '.', '');
                     $totalImporteTipo2Formateado = str_replace('.', '', $totalImporteTipo2Formateado); // Eliminar el punto
                     $totalImporteTipo2Formateado = str_pad($totalImporteTipo2Formateado, 15, '0', STR_PAD_LEFT); // Rellenar con ceros
-                    $totalRegistrosTipo2++;
                     $totalRegistrosTipo2 = str_pad($totalRegistrosTipo2, 7, '0', STR_PAD_LEFT);
+                    $totalRegistrosTipo2++;
                 }
+
+                $identificador = $this->identificador;
 
                 $importeAceptados = str_repeat('0', 15);
 
@@ -560,6 +487,7 @@ class CargaArchivo extends Component
 
                     // Agregar los datos procesados al array
                     $this->datosProcesadosTipo3[] = [
+                        'identificador_unico' => $identificador,
                         'tipo_registro' => $tipoRegistro,
                         'total_importe' => $totalImporteTipo2Formateado,
                         'total_registros' => $totalRegistrosTipo2,
@@ -576,6 +504,7 @@ class CargaArchivo extends Component
                     ];
 
                     $this->ultimaFilaTipo3 = [
+                        'identificador_unico' => $identificador,
                         'tipo_registro' => $tipoRegistro,
                         'total_importe' => $totalImporteTipo2Formateado,
                         'total_registros' => $totalRegistrosTipo2,
@@ -686,40 +615,30 @@ class CargaArchivo extends Component
 
     public function descargarDatosRegistroTipo2()
     {
-        // Verifica que la sección actual sea "regitro_tipo1" y que haya datos antes de generar el archivo
-        if ($this->seccionSeleccionada === 'registro_tipo_2' && count($this->datosProcesadosTipo2) > 0) {
+        // Verifica que haya datos cargados en datosCargadosTipo2
+        if (count($this->datosCargadosTipo2) > 0) {
             // Genera el contenido del archivo TXT
             $contenido = '';
-            foreach ($this->datosProcesadosTipo2 as $fila) {
-                // Formatea los campos según las longitudes
+            foreach ($this->datosCargadosTipo2 as $fila) {
+                // Formatea los campos según las longitudes y concatena sin espacios
                 $contenido .=
+                    $fila['identificador_unico'] .
                     $fila['tipo_registro'] .
-                    $fila['entidad_acreditar'] .
-                    $fila['sucursal_acreditar'] .
-                    $fila['digito_acreditar_bloque1'] .
-                    $fila['digito_acreditar_cbu_bloque2'] .
-                    $fila['importe'] .
+                    $fila['nombre'] .
+                    $fila['documento'] .
+                    $fila['fecha'] .
                     $fila['referencia'] .
-                    $fila['identificacion_cliente'] .
-                    $fila['clase_documento'] .
-                    $fila['tipo_documento'] .
-                    $fila['nro_documento'] .
-                    $fila['estado'] .
-                    $fila['datos_empresa'] .
-                    $fila['identificador_prestamo'] .
-                    $fila['nro_operacion_link'] .
-                    $fila['sucursal_acreditar_BNA'] .
-                    $fila['numero_registro_link'] .
-                    $fila['observaciones'] .
-                    $fila['filler'] . "\n";
+                    $fila['importe'] .
+                    $fila['fecha2'] .
+                    $fila['importe_formateado'] . "\n";
             }
-
+    
             // Define el nombre del archivo
             $nombreArchivo = 'datos_registro_tipo_2.txt';
-
+    
             // Crea el archivo en el almacenamiento temporal
             file_put_contents($nombreArchivo, $contenido);
-
+    
             // Proporciona una respuesta para descargar el archivo
             return response()->stream(
                 function () use ($nombreArchivo) {
@@ -825,7 +744,7 @@ class CargaArchivo extends Component
 public function eliminarUltimoArchivoTipo1()
 {
     // Busca el último archivo de "Registros Tipo 1" en la lista de registrosArchivos
-    $ultimoIndice = $this->findLastIndexByTipoRegistro('Registros tipo 1');
+    $ultimoIndice = $this->findLastIndexByTipoRegistro('Registros tipo 1'); // Asegúrate de pasar 'Registros tipo 1'
 
     // Verifica si se encontró el último archivo
     if ($ultimoIndice !== null) {
@@ -853,36 +772,57 @@ public function eliminarUltimoArchivoTipo1()
     }
 }
 
-
 public function eliminarUltimosDatosTipo2()
 {
-    // Busca el último archivo de "Registros Tipo 2" en la lista de registrosArchivos
-    $ultimoIndice = $this->findLastIndexByTipoRegistro('Registros tipo 2');
+   // Busca el último archivo de "Registros Tipo 2" en la lista de registrosArchivos
+   $ultimoIndice = $this->findLastIndexByTipoRegistro('Registros tipo 2'); // Asegúrate de pasar 'Registros tipo 2'
 
-    // Verifica si se encontró el último archivo
-    if ($ultimoIndice !== null) {
-        // Obtiene los datos del último archivo de "Registros Tipo 2"
-        $ultimosRegistros = $this->registrosArchivos[$ultimoIndice]['datos'];
+   // Verifica si se encontró el último archivo
+   if ($ultimoIndice !== null) {
+       // Obtiene los datos del último archivo de "Registros Tipo 2"
+       $ultimosRegistros = $this->registrosArchivos[$ultimoIndice]['datos'];
 
-        // Elimina los registros del último archivo de "Registros Tipo 2" de la lista de datosProcesadosTipo2
-        foreach ($ultimosRegistros as $registro) {
-            $index = array_search($registro, $this->datosProcesadosTipo2);
-            if ($index !== false) {
-                unset($this->datosProcesadosTipo2[$index]);
-            }
+       // Elimina los registros del último archivo de "Registros Tipo 2" de la lista de datosProcesadosTipo2
+       foreach ($ultimosRegistros as $registro) {
+           $index = array_search($registro, $this->datosProcesadosTipo2);
+           if ($index !== false) {
+               unset($this->datosProcesadosTipo2[$index]);
+           }
+       }
+
+       // Limpia los elementos eliminados
+       $this->datosProcesadosTipo2 = array_values($this->datosProcesadosTipo2);
+
+       // Elimina el último archivo de "Registros Tipo 2" de la lista de registrosArchivos
+       unset($this->registrosArchivos[$ultimoIndice]);
+       $this->registrosArchivos = array_values($this->registrosArchivos);
+
+       // Realiza cualquier otra lógica necesaria después de eliminar los registros
+
+       // Puedes agregar un mensaje de éxito o redireccionar según tus necesidades
+   }
+}
+
+
+
+private function eliminarDatosTipo2YTipo3PorIdentificador($identificadorUnico)
+{
+    // Recorre los datos procesados de tipo 2 y tipo 3 y elimina los registros con el mismo identificador único
+    foreach ($this->datosProcesadosTipo2 as $indexTipo2 => $registroTipo2) {
+        if ($registroTipo2['identificador_unico'] === $identificadorUnico) {
+            unset($this->datosProcesadosTipo2[$indexTipo2]);
         }
-
-        // Limpia los elementos eliminados
-        $this->datosProcesadosTipo2 = array_values($this->datosProcesadosTipo2);
-
-        // Elimina el último archivo de "Registros Tipo 2" de la lista de registrosArchivos
-        unset($this->registrosArchivos[$ultimoIndice]);
-        $this->registrosArchivos = array_values($this->registrosArchivos);
-
-        // Realiza cualquier otra lógica necesaria después de eliminar los registros
-
-        // Puedes agregar un mensaje de éxito o redireccionar según tus necesidades
     }
+
+    foreach ($this->datosProcesadosTipo3 as $indexTipo3 => $registroTipo3) {
+        if ($registroTipo3['identificador_unico'] === $identificadorUnico) {
+            unset($this->datosProcesadosTipo3[$indexTipo3]);
+        }
+    }
+
+    // Reindexa los arrays después de eliminar registros
+    $this->datosProcesadosTipo2 = array_values($this->datosProcesadosTipo2);
+    $this->datosProcesadosTipo3 = array_values($this->datosProcesadosTipo3);
 }
 
 // Función auxiliar para encontrar el último índice de un tipo de registro específico
