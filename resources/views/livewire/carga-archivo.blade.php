@@ -56,7 +56,7 @@
         <!-- Contenido de la sección REGISTRO  TIPO 1-->
         @if ($seccionSeleccionada === 'registro_tipo_1')
             <!-- Coloca aquí el contenido de la sección "Registro Tipo 1" -->
-            <p class="text-white">Seccion para registros de tipo 1</p>
+            <p class="text-white">SECCION PARA REGISTROS TIPO 1</p>
             <div class="grid grid-cols-2 gap-8">
                 <!-- Sección izquierda para el formulario de carga de archivos -->
                 <div class="fondocolor rounded-lg shadow-lg">
@@ -255,7 +255,7 @@
             </div>
         @elseif ($seccionSeleccionada === 'registro_tipo_2')
             <!-- Coloca aquí el contenido de la sección "Registro Tipo 2" -->
-            <p class="text-white">Seccion para registros de tipo 2</p>
+            <p class="text-white">SECCION PARA REGISTROS TIPO 2</p>
             <div class="grid grid-cols-2 gap-8">
                 <!-- Sección izquierda para el formulario de carga de archivos -->
                 <div class="fondocolor rounded-lg shadow-lg">
@@ -316,31 +316,43 @@
                                         <tr>
                                             <th
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                CODIGO
+                                                REGISTRO TIPO
                                             </th>
                                             <th
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                RAZON SOCIAL
+                                                ENTIDAD
                                             </th>
                                             <th
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                DOCUMENTO
+                                                SUCURSAL
                                             </th>
                                             <th
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                COMPROBANTE EMISION
+                                                CBU
                                             </th>
                                             <th
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                COMPROBANTE
+                                                IMPORTE
                                             </th>
                                             <th
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                COMPROBANTE IMPORTE
+                                                REFERENCIA
                                             </th>
                                             <th
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                VENCIMIENTO
+                                                IDENTIFICACION CLIENTE
+                                            </th>
+                                            <th
+                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
+                                                CLASE DE DOCUMENTO
+                                            </th>
+                                            <th
+                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
+                                                TIPO DE CUENTA
+                                            </th>
+                                            <th
+                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
+                                                IDENTIFICACION PRESTAMO
                                             </th>
                                         </tr>
                                     </thead>
@@ -352,22 +364,31 @@
                                                         {{ $fila['tipo_registro'] }}
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        <?php echo isset($fila['nombre']) ? $fila['nombre'] : ''; ?>
+                                                        <?php echo isset($fila['entidad_acreditar']) ? $fila['entidad_acreditar'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        <?php echo isset($fila['documento']) ? $fila['documento'] : ''; ?>
+                                                        <?php echo isset($fila['sucursal_acreditar']) ? $fila['sucursal_acreditar'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        <?php echo isset($fila['fecha']) ? $fila['fecha'] : ''; ?>
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['referencia'] }}
+                                                        <?php echo isset($fila['cbu']) ? $fila['cbu'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
                                                         {{ $fila['importe_formateado'] }}
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['fecha2'] }}
+                                                        {{ $fila['referencia'] }}
+                                                    </td>
+                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
+                                                        {{ $fila['cuil'] }}
+                                                    </td>
+                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
+                                                        {{ $fila['clase_documento'] }}
+                                                    </td>
+                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
+                                                        {{ $fila['tipo_documento_beneficiario'] }}
+                                                    </td>
+                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
+                                                        {{ $fila['identificador_prestamo'] }}
                                                     </td>
                                                 </tr>
                                             @endif
@@ -398,7 +419,7 @@
             </div>
         @elseif ($seccionSeleccionada === 'registro_tipo_3')
             <!-- Coloca aquí el contenido de la sección "Registro Tipo 3" -->
-            <p class="text-white">Seccion para registros de tipo 3</p>
+            <p class="text-white">SECCION PARA REGISTROS TIPO 3</p>
             <div class="grid grid-cols-1 gap-8">
 
                 <!-- Sección derecha para las instrucciones -->
