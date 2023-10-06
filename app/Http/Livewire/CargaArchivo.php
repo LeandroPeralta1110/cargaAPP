@@ -2,7 +2,7 @@
 //Componente donde se ecuentra toda la logica de el programa, tanto la carga, descarga y eliminacion de archivos.
 
 namespace App\Http\Livewire;
-
+use App\Helpers\Expressions;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -31,6 +31,7 @@ class CargaArchivo extends Component
     public $identificadorUnicoCargadoTipo2;
     public $datosCargadosTipo2 = [];
     public $identificadorTipo2;
+    private $expresionesRegulares = [];
 
     public $ultimoArchivo = [];
     public $cantidadDatos = 0; 
@@ -233,130 +234,7 @@ class CargaArchivo extends Component
     }
 }
 
-    //carga de datos tipo 1
-    public function cargaArchivoTipo1()
-    {
-        $this->validate([
-            'archivo' => 'required|mimes:csv,txt,XLSX|max:2048',
-        ]);
-        
-        // Obtener el contenido del archivo
-        $contenido = file_get_contents($this->archivo->getRealPath());
-
-        // Procesar el contenido del archivo CSV o TXT
-        $lineas = explode("\n", $contenido);
-
-        foreach ($lineas as $linea) {
-            // Dividir la línea en elementos usando la coma como separador (para CSV)
-            // O usar explode con tabulación "\t" si es un archivo de texto (TXT)
-            $datos = str_getcsv($linea, ',');
-
-            // Verificar si se obtuvieron datos válidos
-            if (count($datos) >= 3) {
-                // Tipo de Registro (Predefinido)
-                $tipoRegistro = '1';
-
-                // CUIT EMPRESA (Longitud 11)
-                $cuitEmpresa = preg_replace('/[^0-9]/', '', $datos[0]);
-                $cuitEmpresa = str_pad($cuitEmpresa, 11, '0', STR_PAD_LEFT);
-
-                // CODIGO SUCURSAL (Longitud 4)
-                $codigoSucursal = str_pad($datos[1], 4, '0', STR_PAD_LEFT);
-
-                // CBU de la empresa (Longitud 11)
-                $cbuEmpresa = preg_replace('/[^0-9]/', '', $datos[2]);
-                $cbuEmpresa = str_pad($cbuEmpresa, 11, '0', STR_PAD_LEFT);
-
-                // Dividir el DBU usando "-" como separador
-                $dbu = explode('-', $datos[2]);
-                if (count($dbu) == 2) {
-                    $cbuDeseado = preg_replace('/[^0-9]/', '', $dbu[1]);
-                    $cbuDeseado = str_pad($cbuDeseado, 11, '0', STR_PAD_LEFT);
-                } else {
-                    $cbuDeseado = ''; // Manejo de error si no hay un "-" en DBU
-                }
-
-                // Moneda (0 para pesos, 1 para dólares)
-                $moneda = $datos[3];
-                // Fecha de Pago (Longitud 8, formato aaaammdd)
-                $fechaPago = substr($datos[4], 0, 8);
-
-                // Informacion Criterio Empresa (Longitud 20, tipo alfanumerico)
-                $infoCriterioEmpresa = substr($datos[5], 0, 20);
-
-                // Tipo de Pago (Longitud 3, predefinido como "MIN")
-                $tipoPago = 'MIN';
-
-                // Clase de Pagos (Longitud 1, predefinido como "2")
-                $clasePagos = '2';
-
-                // Codigo de Convenio (Longitud 10, completar con ceros)
-                $codigoConvenio = str_pad(preg_replace('/[^0-9]/', '', $datos[6]), 6, '0', STR_PAD_LEFT);
-
-                // Numero de Envio (Longitud 6, completar con ceros)
-                $numeroEnvio = str_pad(preg_replace('/[^0-9]/', '', $datos[7]), 6, '0', STR_PAD_LEFT);
-
-                // Sistema Original (Longitud 2, completar con ceros)
-                $sistemaOriginal = '00';
-
-                // Filler (Longitud 15, completar con ceros)
-                $filler = str_repeat('0', 15);
-
-                // Casa Envio Rendicion (Longitud 4, completar con ceros)
-                $casaEnvioRendicion = str_repeat('0', 4);
-
-                // Filler2 (Longitud 100, completar con ceros)
-                $filler2 = str_repeat('0', 100);
-
-                if ($this->seccionSeleccionada === 'registro_tipo_1') {
-                    // Agregar los datos procesados al array
-                    $this->datosProcesadosTipo1[] = [
-                        'tipo_registro' => $tipoRegistro,
-                        'cuit_empresa' => $cuitEmpresa,
-                        'codigo_sucursal' => $codigoSucursal,
-                        'cbu_deseado' => $cbuDeseado,
-                        'moneda' => $moneda,
-                        'fecha_pago' => $fechaPago,
-                        'info_criterio_empresa' => $infoCriterioEmpresa,
-                        'tipo_pago' => $tipoPago,
-                        'clase_pagos' => $clasePagos,
-                        'codigo_convenio' => $codigoConvenio,
-                        'numero_envio' => $numeroEnvio,
-                        'sistema_original' => $sistemaOriginal,
-                        'filler' => $filler,
-                        'casa_envio_rendicion' => $casaEnvioRendicion,
-                        'filler2' => $filler2,
-                    ];
-                    $datosArchivoActual[] = [
-                        'tipo_registro' => $tipoRegistro,
-                        'cuit_empresa' => $cuitEmpresa,
-                        'codigo_sucursal' => $codigoSucursal,
-                        'cbu_deseado' => $cbuDeseado,
-                        'moneda' => $moneda,
-                        'fecha_pago' => $fechaPago,
-                        'info_criterio_empresa' => $infoCriterioEmpresa,
-                        'tipo_pago' => $tipoPago,
-                        'clase_pagos' => $clasePagos,
-                        'codigo_convenio' => $codigoConvenio,
-                        'numero_envio' => $numeroEnvio,
-                        'sistema_original' => $sistemaOriginal,
-                        'filler' => $filler,
-                        'casa_envio_rendicion' => $casaEnvioRendicion,
-                        'filler2' => $filler2,
-                    ];
-                }
-            }
-        }
-        $this->registrosArchivos[] = [
-            'nombre_archivo' => $this->archivo->getClientOriginalName(),
-            'tipo_registro' => 'Registros tipo 1',
-            'datos' => $datosArchivoActual, // Almacena los datos procesados del archivo actual
-        ];
-        $this->registrosArchivosTipo1 = $this->registrosArchivos;
-        $this->mostrarDatosTipo1 = true;
-    }
-
-    public function cargaArchivoTipo2()
+public function cargaArchivoTipo2()
 {
     $this->validate([
         'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
@@ -364,10 +242,48 @@ class CargaArchivo extends Component
 
     // Obtener el contenido del archivo
     $contenido = file_get_contents($this->archivo->getRealPath());
-
-    // Procesar el contenido del archivo CSV o TXT
     $lineas = explode("\n", $contenido);
+    $primeraFila = trim($lineas[0]); // Asumiendo que la primera fila contiene el formato
 
+    $expresionesRegulares = [
+        Expressions::$expresionEntidad,
+        Expressions::$expresionCuentaSucursal,
+        Expressions::$expresionCBU,
+        Expressions::$expresionCUIT,
+        Expressions::$expresionImporte,
+        Expressions::$expresionReferencia,
+        Expressions::$expresionIdentificacionCliente,
+    ];
+
+    $expresionesRegulares = [];
+
+    // Verificar si hay expresiones regulares existentes y si coinciden con los datos
+    if (!empty($expresionesRegulares)) {
+        $expresionesValidas = true;
+
+        // Verifica si las expresiones regulares coinciden con la primera fila
+        foreach ($expresionesRegulares as $indice => $expresionRegular) {
+            $campo = explode(';', $primeraFila)[$indice];
+            if (!preg_match($expresionRegular, $campo)) {
+                $expresionesValidas = false;
+                break;
+            }
+        }
+
+        // Si las expresiones actuales son válidas, no es necesario regenerarlas
+        if ($expresionesValidas) {
+            $this->procesarArchivo($lineas, $expresionesRegulares);
+            return;
+        }
+    }
+
+    // Si no hay expresiones regulares o no coinciden con la primera fila, genera nuevas expresiones regulares
+    $expresionesRegulares = $this->generarExpresionesRegularesDesdeFila($primeraFila, $expresionesRegulares);
+    $this->procesarArchivo($lineas, $expresionesRegulares);
+}
+
+public function procesarArchivo($lineas, $expresionesRegulares)
+{
     $totalImporte = 0;
     $datosCargadosTemporal = [];
     $contadorRegistrosTipo2 = 0;
@@ -379,113 +295,143 @@ class CargaArchivo extends Component
     $identificadorTipo2 = uniqid();
     $this->identificadorTipo2 = $identificadorTipo2;
 
+    $datosArchivoActual = [];
+
     foreach ($lineas as $linea) {
-        // Dividir la línea en elementos usando el punto y coma como separador
-        $datos = explode(';', $linea);
+        // Verificar si la línea no está vacía
+        if (!empty($linea)) {
+            // Dividir la línea en elementos usando el punto y coma como separador
+            $datos = explode(';', $linea);
 
-        // Verificar si se obtuvieron datos válidos
-        if (count($datos) >= 8) {
-            $entidadAcreditar = 011;
-            $cuentaAcreditar = 599;
-
-            $entidadAcreditar = str_pad($entidadAcreditar, 4, '0', STR_PAD_LEFT);
-            $cuentaAcreditar = str_pad($cuentaAcreditar, 4, '0', STR_PAD_LEFT);
-
-            $cbu = '01105998-30000565884328';
-
-            $partes = explode("-", $cbu);
-            $primerBloque = $partes[0];
-            $segundoBloque = $partes[1];
-
-            // Extraer el último número del primer bloque
-            $ultimoNumeroPrimerBloque = substr($primerBloque, -1);
-
-            // Obtener todos los números del segundo bloque
-            $numerosSegundoBloque = preg_replace("/[^0-9]/", "", $segundoBloque);
-
-            /* if (!empty($fila['sucursal_acreditar'])) {
-                $sucursal = str_pad($datos['sucursal_acreditar'], 4, '0', STR_PAD_LEFT);
-            } */
-            $referencia = 'Pago Proveedores';
-            
-            $identificacionCliente = rand(1, 3);
-            $cuil = $datos[2];
-            $cuil = str_pad($cuil, strlen($cuil) + 10);
-            $importeOriginal = $datos[5];
-
-            // Elimina el símbolo "$" y las comas de la cadena de importe
-            $importeLimpio = str_replace(['$', ','], '', $importeOriginal);
-
-            // Convierte la cadena en un número entero positivo
-            $importeEntero = abs((int)$importeLimpio);
-
-            // Divide el número por 100 para obtener el valor en dólares y centavos
-            $importeDecimal = $importeEntero / 100;
-            
-            if (!empty($datos[8])) {
-                $datosEmpresa = $datos[8];
-            } else {
-                // Si el último dato de la fila está vacío, llenarlo con 13 espacios en blanco
-                $datosEmpresa = str_pad('', 13);
+            // Si la longitud de los datos es diferente de la longitud de las expresiones regulares,
+            // entonces actualiza las expresiones regulares y reintentemos la validación.
+            if (count($datos) !== count($expresionesRegulares)) {
+                $expresionesRegulares = $this->generarExpresionesRegularesDesdeFila($linea, $expresionesRegulares);
             }
 
-            // Formatea el número como moneda, agregando el símbolo de moneda al inicio
-            $importeFormateado = "$" . number_format($importeDecimal, 2, ',', '.');
-            $claseDocumento = '0';
-            $tipoDocumentoBeneficiario = '00';
-            $usoBNA = '00';
-            $nroDocumentoBeneficiario = str_pad('0',11);
-            $cuilConCeros = str_pad('0',11);
-            $estado = '00';
-            $identificadorPrestamo = '0000';
-            $nroOperacionLink = str_pad('0',9);
-            $sucursalAcreditar = '0000';
-            $nroRegistro = str_pad('0',6);
-            $observaciones = str_pad('0',15);
-            $filler = str_pad('0',62);
+            // Verificar si hay la misma cantidad de campos que expresiones regulares
+            if (count($datos) === count($expresionesRegulares)) {
+                $datosValidos = true;
+                dd($expresionesRegulares);
+                // Itera sobre cada campo y verifica si coincide con su expresión regular correspondiente
+                foreach ($datos as $indice => $dato) {
+                    $expresionRegular = $expresionesRegulares[$indice];
 
-            $datosArchivoActual[] = [
-                'identificador_tipo2' => $identificadorTipo2,
-                'tipo_registro' => $tipoRegistro,
-                'entidad_acreditar' => $entidadAcreditar,
-                'sucursal_acreditar' => $cuentaAcreditar,
-                'ultimo_numero_primer_bloque' => $ultimoNumeroPrimerBloque,
-                'numero_segundo_bloque' => $numerosSegundoBloque,
-                'cbu' => $cbu,
-                'referencia' => $referencia,
-                'identificacion_cliente' => $identificacionCliente,
-                'cuil'=> $cuil,
-                'cuil_con_ceros'=> $cuilConCeros,
-                'uso_bna'=> $usoBNA,
-                'identificador_prestamo' => $identificadorPrestamo,
-                'importe' => $importeEntero,
-                'importe_formateado' => $importeFormateado,
-                'datos_empresa' => $datosEmpresa, // Datos de la empresa
-                'clase_documento' => $claseDocumento,
-                'datos_empresa' => $datosEmpresa,
-                'tipo_documento_beneficiario'=> $tipoDocumentoBeneficiario,
-                'nro_documento' => $nroDocumentoBeneficiario,
-                'estado' => $estado,
-                'identificador_prestamo' => $identificadorPrestamo,
-                'nro_operacion_link' => $nroOperacionLink,
-                'sucursal_acreditar' => $sucursalAcreditar,
-                'nro_registro' => $nroRegistro,
-                'observaciones' => $observaciones,
-                'filler' => $filler,
-            ];
-            // Incrementar el contador de registros Tipo 2
-            $contadorRegistrosTipo2++;
+                    if (!preg_match($expresionRegular, $dato)) {
+                        // El dato no coincide con el formato esperado
+                        $datosValidos = false;
+                        break;
+                    }
+                }
+
+                if ($datosValidos) {
+                    $entidadAcreditar = 011;
+                    $cuentaAcreditar = 599;
+    
+                    $entidadAcreditar = str_pad($entidadAcreditar, 4, '0', STR_PAD_LEFT);
+                    $cuentaAcreditar = str_pad($cuentaAcreditar, 4, '0', STR_PAD_LEFT);
+    
+                    $cbu = '01105998-30000565884328';
+    
+                    $partes = explode("-", $cbu);
+                    $primerBloque = $partes[0];
+                    $segundoBloque = $partes[1];
+    
+                    // Extraer el último número del primer bloque
+                    $ultimoNumeroPrimerBloque = substr($primerBloque, -1);
+    
+                    // Obtener todos los números del segundo bloque
+                    $numerosSegundoBloque = preg_replace("/[^0-9]/", "", $segundoBloque);
+    
+                    /* if (!empty($fila['sucursal_acreditar'])) {
+                        $sucursal = str_pad($datos['sucursal_acreditar'], 4, '0', STR_PAD_LEFT);
+                    } */
+                    $referencia = 'Pago Proveedores';
+    
+                    $identificacionCliente = rand(1, 3);
+                    $cuil = $datos[2];
+                    $cuil = str_pad($cuil, strlen($cuil) + 10);
+                    $importeOriginal = $datos[5];
+    
+                    // Elimina el símbolo "$" y las comas de la cadena de importe
+                    $importeLimpio = str_replace(['$', ','], '', $importeOriginal);
+    
+                    // Convierte la cadena en un número entero positivo
+                    $importeEntero = abs((int)$importeLimpio);
+    
+                    // Divide el número por 100 para obtener el valor en dólares y centavos
+                    $importeDecimal = $importeEntero / 100;
+    
+                    if (!empty($datos[8])) {
+                        $datosEmpresa = $datos[8];
+                    } else {
+                        // Si el último dato de la fila está vacío, llenarlo con 13 espacios en blanco
+                        $datosEmpresa = str_pad('', 13);
+                    }
+    
+                    // Formatea el número como moneda, agregando el símbolo de moneda al inicio
+                    $importeFormateado = "$" . number_format($importeDecimal, 2, ',', '.');
+                    $claseDocumento = '0';
+                    $tipoDocumentoBeneficiario = '00';
+                    $usoBNA = '00';
+                    $nroDocumentoBeneficiario = str_pad('0',11);
+                    $cuilConCeros = str_pad('0',11);
+                    $estado = '00';
+                    $identificadorPrestamo = '0000';
+                    $nroOperacionLink = str_pad('0',9);
+                    $sucursalAcreditar = '0000';
+                    $nroRegistro = str_pad('0',6);
+                    $observaciones = str_pad('0',15);
+                    $filler = str_pad('0',62);
+    
+                    $datosArchivoActual[] = [
+                        'identificador_tipo2' => $identificadorTipo2,
+                        'tipo_registro' => $tipoRegistro,
+                        'entidad_acreditar' => $entidadAcreditar,
+                        'sucursal_acreditar' => $cuentaAcreditar,
+                        'ultimo_numero_primer_bloque' => $ultimoNumeroPrimerBloque,
+                        'numero_segundo_bloque' => $numerosSegundoBloque,
+                        'cbu' => $cbu,
+                        'referencia' => $referencia,
+                        'identificacion_cliente' => $identificacionCliente,
+                        'cuil'=> $cuil,
+                        'cuil_con_ceros'=> $cuilConCeros,
+                        'uso_bna'=> $usoBNA,
+                        'identificador_prestamo' => $identificadorPrestamo,
+                        'importe' => $importeEntero,
+                        'importe_formateado' => $importeFormateado,
+                        'datos_empresa' => $datosEmpresa, // Datos de la empresa
+                        'clase_documento' => $claseDocumento,
+                        'datos_empresa' => $datosEmpresa,
+                        'tipo_documento_beneficiario'=> $tipoDocumentoBeneficiario,
+                        'nro_documento' => $nroDocumentoBeneficiario,
+                        'estado' => $estado,
+                        'identificador_prestamo' => $identificadorPrestamo,
+                        'nro_operacion_link' => $nroOperacionLink,
+                        'sucursal_acreditar' => $sucursalAcreditar,
+                        'nro_registro' => $nroRegistro,
+                        'observaciones' => $observaciones,
+                        'filler' => $filler,
+                    ];
+                    // Incrementar el contador de registros Tipo 2
+                    $contadorRegistrosTipo2++;
+                }
+            } else {
+                // Si los datos no coinciden con el formato actual, actualiza las expresiones regulares
+                $expresionesRegulares = $this->generarExpresionesRegularesDesdeFila($linea, $expresionesRegulares);
+            }
         }
     }
 
     // Al final del procesamiento exitoso, agregar los datos cargados a $this->datosProcesadosTipo2
     $this->datosProcesadosTipo2 = array_merge($this->datosProcesadosTipo2, $datosArchivoActual);
 
+    // Agrega una copia de los datos procesados al array $this->registrosArchivos
     $this->registrosArchivos[] = [
         'identificador_tipo2' => $identificadorTipo2,
         'nombre_archivo' => $this->archivo->getClientOriginalName(),
         'tipo_registro' => 'Registros tipo 2',
-        'datos' => $datosArchivoActual, // Almacena los datos procesados del archivo actual
+        'datos' => $datosArchivoActual,
     ];
 
     // Guardar el total de importe para su uso posterior
@@ -495,6 +441,47 @@ class CargaArchivo extends Component
     // Emitir un evento con los datos para cargaArchivoTipo3
     $this->emit('datosTipo2Cargados', $this->totalImporteTipo2, $contadorRegistrosTipo2);
 }
+
+public function generarExpresionesRegularesDesdeFila($fila, $expresionesRegulares)
+{
+   // Verificar si $fila ya es un array
+   if (is_array($fila)) {
+    // Convertir el array en una cadena de texto uniendo sus elementos con comas
+    $fila = implode(',', $fila);
+}
+
+// Dividir la fila en elementos usando el punto y coma como separador
+$datos = explode(';', $fila);
+
+// Iterar sobre cada dato en la fila
+foreach ($datos as $dato) {
+    $expresionRegular = null;
+
+    // Intentar identificar el tipo de dato y generar una expresión regular en consecuencia
+    if (is_numeric($dato)) {
+        // Si es numérico, expresión regular para números
+        $expresionRegular = '/^\d{' . strlen($dato) . '}$/';
+    } elseif (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $dato)) {
+        // Si parece una fecha en formato DD/MM/YYYY
+        $expresionRegular = '/^\d{2}\/\d{2}\/\d{4}$/';
+    } elseif (strpos($dato, '$') !== false) {
+        // Si contiene el símbolo de dólar ($), expresión regular para valores de moneda
+        $expresionRegular = '/^\$\d{1,3}(,\d{3})*(\.\d{2})?$/';
+    } else {
+        // Si no coincide con los patrones anteriores, expresión regular para letras y caracteres especiales
+        $expresionRegular = '/^[A-Za-z0-9\s\.\-]+$/';
+    }
+
+    // Agregar la expresión regular al array
+    $expresionesRegulares[] = $expresionRegular;
+}
+
+// Aquí puedes guardar las expresiones regulares en una variable de sesión, en una base de datos, o donde prefieras
+// para su posterior uso con archivos que sigan este formato
+
+return $expresionesRegulares;
+}
+
      
     public function cargaArchivoTipo3()
     {
@@ -574,7 +561,6 @@ class CargaArchivo extends Component
                         'importe_sellado_provincial' => $ImporteSelladoProvincial,
                         'filler' => $filler,
                     ];
-
 
             $this->mostrarDatosTipo3 = true; 
     }
