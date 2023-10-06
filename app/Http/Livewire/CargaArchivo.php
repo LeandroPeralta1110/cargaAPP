@@ -3,6 +3,9 @@
 
 namespace App\Http\Livewire;
 
+use ReflectionClass;
+use App\Helpers\Expressions;
+use Illuminate\Database\Query\Expression;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -31,6 +34,9 @@ class CargaArchivo extends Component
     public $identificadorUnicoCargadoTipo2;
     public $datosCargadosTipo2 = [];
     public $identificadorTipo2;
+    public $popupMessage = '';
+    public $errores = [];
+    public $datosNoEncontrados = [];
 
     public $ultimoArchivo = [];
     public $cantidadDatos = 0; 
@@ -357,143 +363,168 @@ class CargaArchivo extends Component
     }
 
     public function cargaArchivoTipo2()
-{
-    $this->validate([
-        'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
-    ]);
+    {
+        $this->validate([
+            'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
+        ]);
+    
+        // Obtener el contenido del archivo
+        $contenido = file_get_contents($this->archivo->getRealPath());
+    
+        // Procesar el contenido del archivo CSV o TXT
+        $lineas = explode("\n", $contenido);
+    
+        $totalImporte = 0;
+        $contadorRegistrosTipo2 = 0;
+        $identificadorTipo2 = uniqid();
+        $this->identificadorTipo2 = $identificadorTipo2;
+        $contadorLinea = 0;
+        $datosArchivoActual = [];
+    
+        // Inicializar un array para registrar los datos no encontrados
+        $datosNoEncontrados = [];
+        $nombresExpresionesNoEncontradas = [];
+    
+        $datosNoEncontrados = [];
 
-    // Obtener el contenido del archivo
-    $contenido = file_get_contents($this->archivo->getRealPath());
+        foreach ($lineas as $linea) {
+            // Incrementa el contador de línea
+            $contadorLinea++;
 
-    // Procesar el contenido del archivo CSV o TXT
-    $lineas = explode("\n", $contenido);
+            // Dividir la línea en elementos usando el punto y coma como separador
+            $datos = explode(';', $linea);
 
-    $totalImporte = 0;
-    $datosCargadosTemporal = [];
-    $contadorRegistrosTipo2 = 0;
-    $identificadorUnico = uniqid();
-    $totalImporteTipo2Formateado = 0;
-    $tipoRegistro = '2';
-    $entidad = '';
-    $sucursal = '';
-    $identificadorTipo2 = uniqid();
-    $this->identificadorTipo2 = $identificadorTipo2;
+            // Inicializar todas las variables antes del bucle
+            $cbu = null;
+            $referencia = null;
+            $entidad = null;
+            $sucursal = null;
+            $identificacionCliente = null;
+            $importe = null; // Inicialización predeterminada para $importe
+            $cuit = null;
+            $datoProcesado = false;
+            $contadorDatosValidos = 0; // Contador de datos válidos
 
-    foreach ($lineas as $linea) {
-        // Dividir la línea en elementos usando el punto y coma como separador
-        $datos = explode(';', $linea);
+            // Verificar si se obtuvieron datos válidos
+            if (count($datos) >= 8) {
+                $datosFaltantesLinea = []; // Inicializar los datos no encontrados para esta línea
 
-        // Verificar si se obtuvieron datos válidos
-        if (count($datos) >= 8) {
-            $entidadAcreditar = 011;
-            $cuentaAcreditar = 599;
+                foreach ($datos as $dato) {
+                    $reflection = new ReflectionClass(Expressions::class);
+                    $expressions = $reflection->getStaticProperties();
 
-            $entidadAcreditar = str_pad($entidadAcreditar, 4, '0', STR_PAD_LEFT);
-            $cuentaAcreditar = str_pad($cuentaAcreditar, 4, '0', STR_PAD_LEFT);
+                    $datoCoincide = false;
 
-            $cbu = '01105998-30000565884328';
+                    foreach ($expressions as $nombreExpresion => $expresion) {
+                        if (preg_match($expresion, $dato)) {
+                            // Si el dato coincide con la expresión regular, puedes realizar acciones según el nombre de la expresión
+                            if ($nombreExpresion === 'expresionEntidad' && $contadorDatosValidos === 0) {
+                                $contadorDatosValidos++;
+                                $datoProcesado = true;
+                                $entidad = $dato;
+                            } elseif ($nombreExpresion === 'expresionCuentaSucursal' && $contadorDatosValidos === 1) {
+                                $contadorDatosValidos++;
+                                $datoProcesado = true;
+                                $sucursal = $dato;
+                            }
+                            if ($nombreExpresion === 'expresionCBU') {
+                                $contadorDatosValidos++;
+                                $datoProcesado = true;
+                                $cbu = $dato;
+                            }
+                            if ($nombreExpresion === 'expresionCUIT') {
+                                $contadorDatosValidos++;
+                                $datoProcesado = true;
+                                $cuit = $dato;
+                            }
+                            if ($nombreExpresion === 'expresionImporte') {
+                                $contadorDatosValidos++;
+                                $datoProcesado = true;
+                                $importe = $dato;
+                            }
+                            if ($nombreExpresion === 'expresionReferencia') {
+                                $contadorDatosValidos++;
+                                $datoProcesado = true;
+                                $referencia = $dato;
+                            }
+                            if ($nombreExpresion === 'expresionIdentificacionCliente') {
+                                $contadorDatosValidos++;
+                                $datoProcesado = true;
+                                $identificacionCliente = $dato;
+                            }
+                            $datoCoincide = true;
+                            break;
+                        }
+                    }
 
-            $partes = explode("-", $cbu);
-            $primerBloque = $partes[0];
-            $segundoBloque = $partes[1];
+                    if (!$datoCoincide) {
+                        // Registrar el dato no encontrado si no se ha registrado previamente
+                        if (!in_array($nombreExpresion, $datosFaltantesLinea)) {
+                            $datosFaltantesLinea[] = $nombreExpresion;
+                        }
+                    }
+                }
 
-            // Extraer el último número del primer bloque
-            $ultimoNumeroPrimerBloque = substr($primerBloque, -1);
-
-            // Obtener todos los números del segundo bloque
-            $numerosSegundoBloque = preg_replace("/[^0-9]/", "", $segundoBloque);
-
-            /* if (!empty($fila['sucursal_acreditar'])) {
-                $sucursal = str_pad($datos['sucursal_acreditar'], 4, '0', STR_PAD_LEFT);
-            } */
-            $referencia = 'Pago Proveedores';
-            
-            $identificacionCliente = rand(1, 3);
-            $cuil = $datos[2];
-            $cuil = str_pad($cuil, strlen($cuil) + 10);
-            $importeOriginal = $datos[5];
-
-            // Elimina el símbolo "$" y las comas de la cadena de importe
-            $importeLimpio = str_replace(['$', ','], '', $importeOriginal);
-
-            // Convierte la cadena en un número entero positivo
-            $importeEntero = abs((int)$importeLimpio);
-
-            // Divide el número por 100 para obtener el valor en dólares y centavos
-            $importeDecimal = $importeEntero / 100;
-            
-            if (!empty($datos[8])) {
-                $datosEmpresa = $datos[8];
+                if ($contadorDatosValidos < 2) {
+                    // Si no se encontraron al menos 2 datos válidos, muestra un mensaje de error
+                    $datosNoEncontrados[$contadorLinea] = $datosFaltantesLinea;
+                    continue;
+                } else {
+                    // Agregar los datos procesados al array $datosArchivoActual
+                    $datosArchivoActual[] = [
+                        'tipo_registro' => '2',
+                        'identificador_tipo2' => $identificadorTipo2,
+                        'entidad_acreditar' => $entidad,
+                        'sucursal_acreditar' => $sucursal,
+                        'cbu' => $cbu,
+                        'referencia' => $referencia,
+                        'cuit' => $cuit,
+                        'importe' => $importe,
+                        'identificacion_cliente' => $identificacionCliente,
+                        // Agrega más datos según sea necesario...
+                    ];
+                    $contadorRegistrosTipo2++;
+                }
             } else {
-                // Si el último dato de la fila está vacío, llenarlo con 13 espacios en blanco
-                $datosEmpresa = str_pad('', 13);
+                continue;
             }
-
-            // Formatea el número como moneda, agregando el símbolo de moneda al inicio
-            $importeFormateado = "$" . number_format($importeDecimal, 2, ',', '.');
-            $claseDocumento = '0';
-            $tipoDocumentoBeneficiario = '00';
-            $usoBNA = '00';
-            $nroDocumentoBeneficiario = str_pad('0',11);
-            $cuilConCeros = str_pad('0',11);
-            $estado = '00';
-            $identificadorPrestamo = '0000';
-            $nroOperacionLink = str_pad('0',9);
-            $sucursalAcreditar = '0000';
-            $nroRegistro = str_pad('0',6);
-            $observaciones = str_pad('0',15);
-            $filler = str_pad('0',62);
-
-            $datosArchivoActual[] = [
-                'identificador_tipo2' => $identificadorTipo2,
-                'tipo_registro' => $tipoRegistro,
-                'entidad_acreditar' => $entidadAcreditar,
-                'sucursal_acreditar' => $cuentaAcreditar,
-                'ultimo_numero_primer_bloque' => $ultimoNumeroPrimerBloque,
-                'numero_segundo_bloque' => $numerosSegundoBloque,
-                'cbu' => $cbu,
-                'referencia' => $referencia,
-                'identificacion_cliente' => $identificacionCliente,
-                'cuil'=> $cuil,
-                'cuil_con_ceros'=> $cuilConCeros,
-                'uso_bna'=> $usoBNA,
-                'identificador_prestamo' => $identificadorPrestamo,
-                'importe' => $importeEntero,
-                'importe_formateado' => $importeFormateado,
-                'datos_empresa' => $datosEmpresa, // Datos de la empresa
-                'clase_documento' => $claseDocumento,
-                'datos_empresa' => $datosEmpresa,
-                'tipo_documento_beneficiario'=> $tipoDocumentoBeneficiario,
-                'nro_documento' => $nroDocumentoBeneficiario,
-                'estado' => $estado,
-                'identificador_prestamo' => $identificadorPrestamo,
-                'nro_operacion_link' => $nroOperacionLink,
-                'sucursal_acreditar' => $sucursalAcreditar,
-                'nro_registro' => $nroRegistro,
-                'observaciones' => $observaciones,
-                'filler' => $filler,
-            ];
-            // Incrementar el contador de registros Tipo 2
-            $contadorRegistrosTipo2++;
         }
+       
+        // Verificar si hay datos no encontrados y mostrarlos en la vista
+        if (!empty($datosNoEncontrados)) {
+            $this->popupMessage = 'Faltan los siguientes datos en el archivo:';
+            foreach ($datosNoEncontrados as $linea => $datosFaltantes) {
+                $this->popupMessage .= '<br>Línea ' . $linea . ': ' . implode(', ', $datosFaltantes);
+            }
+        } else {
+            // Al final del procesamiento exitoso, agregar los datos cargados a $this->datosProcesadosTipo2
+            $this->datosProcesadosTipo2 = $datosArchivoActual;
+    
+            $this->registrosArchivos[] = [
+                'identificador_tipo2' => $identificadorTipo2,
+                'nombre_archivo' => $this->archivo->getClientOriginalName(),
+                'tipo_registro' => 'Registros tipo 2',
+                'datos' => $datosArchivoActual, // Almacena los datos procesados del archivo actual
+            ];
+    
+            // Guardar el total de importe para su uso posterior
+            $this->totalImporteTipo2 = $totalImporte;
+            $this->mostrarDatosTipo2 = true;
+    
+            // Emitir un evento con los datos para cargaArchivo
+            $this->emit('datosTipo2Cargados', $this->totalImporteTipo2, $contadorRegistrosTipo2);
+        }
+    
+        // Pasar los datos no encontrados a la vista
+        $this->datosNoEncontrados = $datosNoEncontrados;
+    
+        // Cargar la vista correspondiente
+        return view('livewire.carga-archivo', ['datosNoEncontrados' => $datosNoEncontrados]);
     }
 
-    // Al final del procesamiento exitoso, agregar los datos cargados a $this->datosProcesadosTipo2
-    $this->datosProcesadosTipo2 = array_merge($this->datosProcesadosTipo2, $datosArchivoActual);
-
-    $this->registrosArchivos[] = [
-        'identificador_tipo2' => $identificadorTipo2,
-        'nombre_archivo' => $this->archivo->getClientOriginalName(),
-        'tipo_registro' => 'Registros tipo 2',
-        'datos' => $datosArchivoActual, // Almacena los datos procesados del archivo actual
-    ];
-
-    // Guardar el total de importe para su uso posterior
-    $this->totalImporteTipo2 = $totalImporte;
-    $this->mostrarDatosTipo2 = true;
-
-    // Emitir un evento con los datos para cargaArchivoTipo3
-    $this->emit('datosTipo2Cargados', $this->totalImporteTipo2, $contadorRegistrosTipo2);
+    public function closePopup()
+{
+    $this->popupMessage = '';
 }
      
     public function cargaArchivoTipo3()

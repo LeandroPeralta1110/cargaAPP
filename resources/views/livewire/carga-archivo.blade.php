@@ -15,10 +15,25 @@
                     <br>
                 </h3>  
                 <hr class="my-4 border-t-2 border-blue-500">
-            @endforeach
+                @endforeach
+            </div>
         </div>
-    </div>
-    @endif 
+        @endif 
+        
+        @if (!empty($datosNoEncontrados))
+        <div class="alert alert-danger">
+            <h4>Datos no encontrados:</h4>
+            <ul>
+                @foreach ($datosNoEncontrados as $linea => $datosFaltantes)
+                    <li>Línea {{ $linea }}:
+                        @foreach ($datosFaltantes as $datoFaltante)
+                            {{ $datoFaltante }},
+                        @endforeach
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+        @endif
 
     <div class="w-full max-w-screen-lg p-6">
         <div class="flex mb-10 mt-5">
@@ -373,15 +388,15 @@
                                                         <?php echo isset($fila['cbu']) ? $fila['cbu'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['importe_formateado'] }}
+                                                        {{ $fila['importe'] }}
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
                                                         {{ $fila['referencia'] }}
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['cuil'] }}
+                                                        {{ $fila['cuit'] }}
                                                     </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
+                                                    {{-- <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
                                                         {{ $fila['clase_documento'] }}
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
@@ -389,7 +404,7 @@
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
                                                         {{ $fila['identificador_prestamo'] }}
-                                                    </td>
+                                                    </td> --}}
                                                 </tr>
                                             @endif
                                         @endforeach
