@@ -245,40 +245,18 @@ public function cargaArchivoTipo2()
     $lineas = explode("\n", $contenido);
     $primeraFila = trim($lineas[0]); // Asumiendo que la primera fila contiene el formato
 
-    $expresionesRegulares = [
-        Expressions::$expresionEntidad,
-        Expressions::$expresionCuentaSucursal,
-        Expressions::$expresionCBU,
-        Expressions::$expresionCUIT,
-        Expressions::$expresionImporte,
-        Expressions::$expresionReferencia,
-        Expressions::$expresionIdentificacionCliente,
-    ];
-
     $expresionesRegulares = [];
 
-    // Verificar si hay expresiones regulares existentes y si coinciden con los datos
-    if (!empty($expresionesRegulares)) {
-        $expresionesValidas = true;
+    // Generar las expresiones regulares desde la primera fila
+    $expresionesRegulares = $this->generarExpresionesRegularesDesdeFila($primeraFila, $expresionesRegulares);
 
-        // Verifica si las expresiones regulares coinciden con la primera fila
-        foreach ($expresionesRegulares as $indice => $expresionRegular) {
-            $campo = explode(';', $primeraFila)[$indice];
-            if (!preg_match($expresionRegular, $campo)) {
-                $expresionesValidas = false;
-                break;
-            }
-        }
-
-        // Si las expresiones actuales son válidas, no es necesario regenerarlas
-        if ($expresionesValidas) {
-            $this->procesarArchivo($lineas, $expresionesRegulares);
-            return;
-        }
+    // Verificar si se generaron correctamente las expresiones regulares
+    if (empty($expresionesRegulares) || count($expresionesRegulares) === 0) {
+        // Las expresiones regulares no se generaron correctamente, muestra un mensaje de error
+        return redirect()->back()->withErrors(['error' => 'No se pudieron generar las expresiones regulares correctamente.']);
     }
 
-    // Si no hay expresiones regulares o no coinciden con la primera fila, genera nuevas expresiones regulares
-    $expresionesRegulares = $this->generarExpresionesRegularesDesdeFila($primeraFila, $expresionesRegulares);
+    // Ahora que las expresiones regulares se han generado, procede con la carga de datos
     $this->procesarArchivo($lineas, $expresionesRegulares);
 }
 
@@ -296,6 +274,7 @@ public function procesarArchivo($lineas, $expresionesRegulares)
     $this->identificadorTipo2 = $identificadorTipo2;
 
     $datosArchivoActual = [];
+    $datosFaltantes = [];
 
     foreach ($lineas as $linea) {
         // Verificar si la línea no está vacía
@@ -303,23 +282,24 @@ public function procesarArchivo($lineas, $expresionesRegulares)
             // Dividir la línea en elementos usando el punto y coma como separador
             $datos = explode(';', $linea);
 
-            // Si la longitud de los datos es diferente de la longitud de las expresiones regulares,
-            // entonces actualiza las expresiones regulares y reintentemos la validación.
-            if (count($datos) !== count($expresionesRegulares)) {
-                $expresionesRegulares = $this->generarExpresionesRegularesDesdeFila($linea, $expresionesRegulares);
-            }
-
             // Verificar si hay la misma cantidad de campos que expresiones regulares
             if (count($datos) === count($expresionesRegulares)) {
                 $datosValidos = true;
-                dd($expresionesRegulares);
+                // Itera sobre cada campo y verifica si coincide con su expresión regular correspondiente
                 // Itera sobre cada campo y verifica si coincide con su expresión regular correspondiente
                 foreach ($datos as $indice => $dato) {
                     $expresionRegular = $expresionesRegulares[$indice];
 
-                    if (!preg_match($expresionRegular, $dato)) {
+                    if (preg_match($expresionRegular, $dato, $matches)) {
+                        // El dato coincide con el formato esperado, lo almacenamos
+                        $datosCapturados[] = $matches[0];
+                    } else {
                         // El dato no coincide con el formato esperado
                         $datosValidos = false;
+                        $datosFaltantes[] = [
+                            'campo' => $indice + 1,
+                            'valor' => $dato,
+                        ];
                         break;
                     }
                 }
@@ -384,35 +364,7 @@ public function procesarArchivo($lineas, $expresionesRegulares)
                     $observaciones = str_pad('0',15);
                     $filler = str_pad('0',62);
     
-                    $datosArchivoActual[] = [
-                        'identificador_tipo2' => $identificadorTipo2,
-                        'tipo_registro' => $tipoRegistro,
-                        'entidad_acreditar' => $entidadAcreditar,
-                        'sucursal_acreditar' => $cuentaAcreditar,
-                        'ultimo_numero_primer_bloque' => $ultimoNumeroPrimerBloque,
-                        'numero_segundo_bloque' => $numerosSegundoBloque,
-                        'cbu' => $cbu,
-                        'referencia' => $referencia,
-                        'identificacion_cliente' => $identificacionCliente,
-                        'cuil'=> $cuil,
-                        'cuil_con_ceros'=> $cuilConCeros,
-                        'uso_bna'=> $usoBNA,
-                        'identificador_prestamo' => $identificadorPrestamo,
-                        'importe' => $importeEntero,
-                        'importe_formateado' => $importeFormateado,
-                        'datos_empresa' => $datosEmpresa, // Datos de la empresa
-                        'clase_documento' => $claseDocumento,
-                        'datos_empresa' => $datosEmpresa,
-                        'tipo_documento_beneficiario'=> $tipoDocumentoBeneficiario,
-                        'nro_documento' => $nroDocumentoBeneficiario,
-                        'estado' => $estado,
-                        'identificador_prestamo' => $identificadorPrestamo,
-                        'nro_operacion_link' => $nroOperacionLink,
-                        'sucursal_acreditar' => $sucursalAcreditar,
-                        'nro_registro' => $nroRegistro,
-                        'observaciones' => $observaciones,
-                        'filler' => $filler,
-                    ];
+                    $datosArchivoActual[] = $datosCapturados;
                     // Incrementar el contador de registros Tipo 2
                     $contadorRegistrosTipo2++;
                 }
@@ -433,7 +385,6 @@ public function procesarArchivo($lineas, $expresionesRegulares)
         'tipo_registro' => 'Registros tipo 2',
         'datos' => $datosArchivoActual,
     ];
-
     // Guardar el total de importe para su uso posterior
     $this->totalImporteTipo2 = $totalImporte;
     $this->mostrarDatosTipo2 = true;
@@ -444,44 +395,53 @@ public function procesarArchivo($lineas, $expresionesRegulares)
 
 public function generarExpresionesRegularesDesdeFila($fila, $expresionesRegulares)
 {
-   // Verificar si $fila ya es un array
-   if (is_array($fila)) {
-    // Convertir el array en una cadena de texto uniendo sus elementos con comas
-    $fila = implode(',', $fila);
-}
-
-// Dividir la fila en elementos usando el punto y coma como separador
-$datos = explode(';', $fila);
-
-// Iterar sobre cada dato en la fila
-foreach ($datos as $dato) {
-    $expresionRegular = null;
-
-    // Intentar identificar el tipo de dato y generar una expresión regular en consecuencia
-    if (is_numeric($dato)) {
-        // Si es numérico, expresión regular para números
-        $expresionRegular = '/^\d{' . strlen($dato) . '}$/';
-    } elseif (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $dato)) {
-        // Si parece una fecha en formato DD/MM/YYYY
-        $expresionRegular = '/^\d{2}\/\d{2}\/\d{4}$/';
-    } elseif (strpos($dato, '$') !== false) {
-        // Si contiene el símbolo de dólar ($), expresión regular para valores de moneda
-        $expresionRegular = '/^\$\d{1,3}(,\d{3})*(\.\d{2})?$/';
-    } else {
-        // Si no coincide con los patrones anteriores, expresión regular para letras y caracteres especiales
-        $expresionRegular = '/^[A-Za-z0-9\s\.\-]+$/';
+    // Verificar si $fila ya es un array
+    if (is_array($fila)) {
+        // Convertir el array en una cadena de texto uniendo sus elementos con comas
+        $fila = implode(',', $fila);
     }
 
-    // Agregar la expresión regular al array
-    $expresionesRegulares[] = $expresionRegular;
+    // Dividir la fila en elementos usando el punto y coma como separador
+    $datos = explode(';', $fila);
+
+    // Inicializar un array para almacenar las expresiones regulares y longitudes esperadas
+    $expresionesYLongitudes = [];
+
+    // Iterar sobre cada dato en la fila
+    foreach ($datos as $indice => $dato) {
+        $expresionRegular = null;
+        $longitudDato = strlen($dato);
+
+        // Intentar identificar el tipo de dato y generar una expresión regular en consecuencia
+        if (is_numeric($dato)) {
+            // Si es numérico, expresión regular para números con la longitud esperada
+            $expresionRegular = '/^\d{' . $longitudDato . '}$/';
+        } elseif (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $dato)) {
+            // Si parece una fecha en formato DD/MM/YYYY
+            $expresionRegular = '/^\d{2}\/\d{2}\/\d{4}$/';
+        } elseif (strpos($dato, '$') !== false) {
+            // Si contiene el símbolo de dólar ($), expresión regular para valores de moneda
+            $expresionRegular = '/^\$\d{1,3}(,\d{3})*(\.\d{2})?$/';
+        } elseif ($longitudDato > 0) {
+            // Si tiene una longitud mayor que 0, expresión regular para letras y caracteres especiales
+            $expresionRegular = '/^[A-Za-z0-9\s\.\-]{' . $longitudDato . '}$/';
+        }
+
+        // Agregar la expresión regular y la longitud al array
+        $expresionesYLongitudes[] = [
+            'expresionRegular' => $expresionRegular,
+            'longitud' => $longitudDato,
+        ];
+    }
+
+    // Actualizar el array $expresionesRegulares con las nuevas expresiones regulares y longitudes
+    $expresionesRegulares = $expresionesYLongitudes;
+
+    // Aquí puedes guardar $expresionesRegulares en una variable de sesión, en una base de datos, o donde prefieras
+    // para su posterior uso con archivos que sigan este formato
+
+    return $expresionesRegulares;
 }
-
-// Aquí puedes guardar las expresiones regulares en una variable de sesión, en una base de datos, o donde prefieras
-// para su posterior uso con archivos que sigan este formato
-
-return $expresionesRegulares;
-}
-
      
     public function cargaArchivoTipo3()
     {
