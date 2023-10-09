@@ -214,46 +214,34 @@
                                                         {{ $fila['tipo_registro'] }}
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['cuit_empresa'] }}
+                                                        <?php echo isset($fila['cuit']) ? $fila['cuit'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['codigo_sucursal'] }}
+                                                        <?php echo isset($fila['entidad_acreditar']) ? $fila['entidad_acreditar'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['cbu_deseado'] }}
+                                                        <?php echo isset($fila['cbu']) ? $fila['cbu'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['moneda'] }}
+                                                        <?php echo isset($fila['moneda']) ? $fila['moneda'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['fecha_pago'] }}
+                                                        <?php echo isset($fila['fecha_pago']) ? $fila['fecha_pago'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['info_criterio_empresa'] }}
+                                                        <?php echo isset($fila['info_criterio_empresa']) ? $fila['info_criterio_empresa'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['tipo_pago'] }}
+                                                        <?php echo isset($fila['tipo_pago']) ? $fila['tipo_pago'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['clase_pagos'] }}
+                                                        <?php echo isset($fila['clase_pagos']) ? $fila['clase_pagos'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['codigo_convenio'] }}
+                                                        <?php echo isset($fila['codigo_convenio']) ? $fila['codigo_convenio'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['numero_envio'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['sistema_original'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['filler'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['casa_envio_rendicion'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        0x100
+                                                        <?php echo isset($fila['numero_envio']) ? $fila['numero_envio'] : ''; ?>
                                                     </td>
                                                 </tr>
                                             @endif
