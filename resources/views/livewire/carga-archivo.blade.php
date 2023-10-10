@@ -20,34 +20,75 @@
         </div>
         @endif 
         
-        @if (!empty($popupMessage))
+        @if (!empty($popupMessage) && ($datosFaltantesTipo1 || $datosFaltantesTipo2))
         <div class="popup-container">
             <div class="alert alert-danger popup">
                 <button class="close-popup-button" wire:click="closePopup">Cerrar</button>
                 <h4>Datos no encontrados:</h4>
                 <ul>
-                    @foreach ($datosNoEncontrados as $linea => $datosFaltantes)
-                    <li>Línea {{ $linea }}:
-                        @foreach ($datosFaltantes as $datoFaltante)
-                        {{ $datoFaltante }},
-                        @endforeach
-                    </li>
-                    @endforeach
+                    @if ($seccionSeleccionada === 'registro_tipo_1'&& $datosFaltantesTipo1)
+                        <li>Tipo 1:</li>
+                        <ul>
+                            @foreach ($datosFaltantesTipo1 as $linea => $camposFaltantes)
+                                <li>Línea {{ $linea }}:
+                                    @foreach ($camposFaltantes as $campoFaltante)
+                                        {{ $campoFaltante }},
+                                    @endforeach
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+    
+                    @if ($seccionSeleccionada === 'registro_tipo_2' && $datosFaltantesTipo2)
+                        <li>Tipo 2:</li>
+                        <ul>
+                            @foreach ($datosFaltantesTipo2 as $linea => $camposFaltantes)
+                                <li>Línea {{ $linea }}:
+                                    @foreach ($camposFaltantes as $campoFaltante)
+                                        {{ $campoFaltante }},
+                                    @endforeach
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
                 </ul>
             </div>
         </div>
-        @endif
-
-        @if ($intentoDescarga)
-        <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 1000)" x-show="show" class="fixed inset-0 flex items-center justify-center z-50">
-            <div class="bg-red-500 text-white p-4 rounded-md shadow-lg">
-                {{ $mensajeError }}
+    @endif
+    
+        @if (!empty($mensajeError))
+        @if ($mostrarMensajeError)
+        <div class="popup-container">
+            <div class="alert alert-danger popup">
+                <button class="close-popup-button" wire:click="closePopup">Cerrar</button>
+                <h4>Datos no encontrados:</h4>
+                <ul>
+                    @if($mostrarMensajeErrorTipo1)
+                        @foreach ($mostrarDatosFaltantesTipo1 as $linea => $datosFaltantes)
+                            <li>Línea {{ $linea }}:
+                                @foreach ($datosFaltantes as $datoFaltante)
+                                    {{ $datoFaltante }},
+                                @endforeach
+                            </li>
+                        @endforeach
+                    @endif
+                    @if($mostrarMensajeErrorTipo2)
+                        @foreach ($datosFaltantesTipo2 as $linea => $datosFaltantes)
+                            <li>Línea {{ $linea }}:
+                                @foreach ($datosFaltantes as $datoFaltante)
+                                    {{ $datoFaltante }},
+                                @endforeach
+                            </li>
+                        @endforeach
+                    @endif
+                </ul>
             </div>
         </div>
         @php
             // Restablece el intento de descarga para mostrar el mensaje nuevamente en futuros intentos
             $intentoDescarga = false;
         @endphp
+    @endif
     @endif
 
     <div class="w-full max-w-screen-lg p-6">
@@ -188,22 +229,6 @@
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
                                                 NUMERO DE ENVIO
                                             </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                SISTEMA ORIGINAL
-                                            </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                FILLER
-                                            </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                CASA ENVIO RENDICION
-                                            </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                FILLER
-                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white">
@@ -232,7 +257,7 @@
                                                         <?php echo isset($fila['info_criterio_empresa']) ? $fila['info_criterio_empresa'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        <?php echo isset($fila['tipo_pago']) ? $fila['tipo_pago'] : ''; ?>
+                                                        <?php echo isset($fila['tipo_pagos']) ? $fila['tipo_pagos'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
                                                         <?php echo isset($fila['clase_pagos']) ? $fila['clase_pagos'] : ''; ?>
