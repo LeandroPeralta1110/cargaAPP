@@ -426,7 +426,7 @@ public function cargaArchivoTipo1()
                 foreach ($datos as $key => $dato) {
                     // Realiza la validación específica para cada tipo de dato
                     if ($this->validarCBU($dato)) {
-                        $datosValidados['cbu'] = $dato;
+                        $datosValidados['cbu'] = $dato; 
                         $cbuEncontrado = true;
                         $entidadEncontrada = true;
                         $cuentaSucursalEncontrada = true;
@@ -438,7 +438,7 @@ public function cargaArchivoTipo1()
                     } elseif ($this->validarCUIT($dato)) {
                         $datosValidados['cuit'] = $dato;
                         $cuitEncontrado = true;
-                    } elseif ($this->validarImporte($dato)) {
+                    } elseif (!$importeEncontrado && preg_match('/-?\d+,\d{2}/', $dato)) {
                         $importe = preg_replace('/[^0-9.,$-]/', '', $dato);
                         // Remover signos negativos
                         $importe = str_replace('-', '', $importe);
