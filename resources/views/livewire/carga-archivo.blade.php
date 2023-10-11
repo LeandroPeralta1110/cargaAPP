@@ -20,13 +20,13 @@
         </div>
         @endif 
         
-        @if (!empty($popupMessage) && ($datosFaltantesTipo1 || $datosFaltantesTipo2))
+        @if (!empty($popupMessage) && ($datosFaltantesTipo1 || $datosFaltantesTipo2 || $datosNoEncontradosAltaProveedor))
         <div class="popup-container">
             <div class="alert alert-danger popup">
                 <button class="close-popup-button" wire:click="closePopup">Cerrar</button>
                 <h4>Datos no encontrados:</h4>
                 <ul>
-                    @if ($seccionSeleccionada === 'registro_tipo_1'&& $datosFaltantesTipo1)
+                    @if ($seccionSeleccionada === 'registro_tipo_1' && $datosFaltantesTipo1)
                         <li>Tipo 1:</li>
                         <ul>
                             @foreach ($datosFaltantesTipo1 as $linea => $camposFaltantes)
@@ -51,10 +51,24 @@
                             @endforeach
                         </ul>
                     @endif
+    
+                    @if ($seccionSeleccionada === 'alta_proveedor' && $datosNoEncontradosAltaProveedor)
+                        <li>Alta Proveedores:</li>
+                        <ul>
+                            @foreach ($datosNoEncontradosAltaProveedor as $linea => $camposFaltantes)
+                                <li>Línea {{ $linea }}:
+                                    @foreach ($camposFaltantes as $campoFaltante)
+                                        {{ $campoFaltante }},
+                                    @endforeach
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
                 </ul>
             </div>
         </div>
     @endif
+    
     
         @if (!empty($mensajeError))
         @if ($mostrarMensajeError)
@@ -81,6 +95,15 @@
                             </li>
                         @endforeach
                     @endif
+                    @if($mostrarMensajeErrorAltaProveedores)
+                    @foreach ($datosNoEncontradosAltaProveedor as $linea => $datosFaltantes)
+                        <li>Línea {{ $linea }}:
+                            @foreach ($datosFaltantes as $datoFaltante)
+                                {{ $datoFaltante }},
+                            @endforeach
+                        </li>
+                    @endforeach
+                @endif
                 </ul>
             </div>
         </div>
@@ -632,7 +655,7 @@
                 <div class="grid grid-cols-2 gap-8">
                     <!-- Sección izquierda para el formulario de carga de archivos -->
                     <div class="fondocolor rounded-lg shadow-lg">
-                        <form wire:submit.prevent="cargarArchivoAltaProveedor">
+                        <form wire:submit.prevent="procesarArchivosAltaProveedores">
                             <div class="bg-gray-200 px-6 py-3 rounded-md">
                                 <h2 class="text-lg font-semibold">Archivo: </h2>
                             </div>
@@ -701,7 +724,7 @@
                                                 </th>
                                                 <th
                                                     class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                    Clave de Cuenta
+                                                    CUIT/CUIL/CDI
                                                 </th>
                                                 <th
                                                     class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
@@ -727,35 +750,35 @@
                                                     <tr>
                                                         <td
                                                             class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                            {{ $fila['cbu'] }}
+                                                             <?php echo isset($fila['cbu']) ? $fila['cbu'] : ''; ?>
                                                         </td>
                                                         <td
                                                             class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                            {{ $fila['alias'] }}
+                                                             <?php echo isset($fila['alias']) ? $fila['alias'] : ''; ?>
                                                         </td>
                                                         <td
                                                             class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                            {{ $fila['id_tipo'] }}
+                                                            <?php echo isset($fila['id_tipo']) ? $fila['id_tipo'] : ''; ?>
                                                         </td>
                                                         <td
                                                             class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                            {{ $fila['clave_cuenta'] }}
+                                                             <?php echo isset($fila['cuit']) ? $fila['cuit'] : ''; ?>
                                                         </td>
                                                         <td
                                                             class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                            {{ $fila['tipo_cuenta'] }}
+                                                            <?php echo isset($fila['tipo_cuenta']) ? $fila['tipo_cuenta'] : ''; ?>
                                                         </td>
                                                         <td
                                                             class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                            {{ $fila['referencia_cuenta'] }}
+                                                             <?php echo isset($fila['referencia']) ? $fila['referencia'] : ''; ?>
                                                         </td>
                                                         <td
                                                             class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                            {{ $fila['email'] }}
+                                                            <?php echo isset($fila['email']) ? $fila['email'] : ''; ?>
                                                         </td>
                                                         <td
                                                             class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                            {{ $fila['titulares'] }}
+                                                            <?php echo isset($fila['titulares']) ? $fila['titulares'] : ''; ?>
                                                         </td>
                                                     </tr>
                                                 @endif
