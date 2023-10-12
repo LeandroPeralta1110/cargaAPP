@@ -146,6 +146,14 @@ class CargaArchivo extends Component
                     $datosValidados['email'] = $email;
                     $emailEncontrado = true;
                 }
+
+                if (!$emailEncontrado) {
+                    $datosValidados['email'] = str_repeat(' ', 50);
+                }
+
+                if (!$referenciaEncontrada) {
+                    $datosValidados['referencia'] = str_repeat(' ', 30);
+                }
             }
                 
             // Verifica si todos los campos requeridos se encontraron
@@ -166,12 +174,6 @@ class CargaArchivo extends Component
                 }
                 if (!$tipoCuentaEncontrado) {
                     $camposFaltantes[] = "Tipo de Cuenta";
-                }
-                if (!$referenciaEncontrada) {
-                    $camposFaltantes[] = "Referencia";
-                }
-                if (!$emailEncontrado) {
-                    $camposFaltantes[] = "Email";
                 }
                 if(!empty($camposFaltantes)){
                     $datosNoEncontrados[$contadorLinea] = $camposFaltantes;
@@ -242,7 +244,7 @@ public function cargaArchivoTipo1()
             'tipo_registro' => '1',
         ];
 
-        $cbuEncontrado = false; // Variable para verificar si se encontró CBU en esta línea
+        $cbuEncontrado = false;
         $cuitEncontrado = false;
         $monedaEncontrada = false;
         $cuentaSucursalEncontrada = false;
@@ -251,7 +253,7 @@ public function cargaArchivoTipo1()
         $codigoConvenioEncontrado = false;
         $numeroEnvioEncontrado = false;
 
-        $camposFaltantes = []; // Reiniciar la variable en cada iteración
+        $camposFaltantes = [];
 
         // Inicializa los contadores
         $contadorMoneda = 0;
@@ -699,7 +701,7 @@ private function validarIdentificacionCliente($dato)
     // Verifica que la sección actual sea "alta_proveedor" y que haya datos antes de generar el archivo
     if ($this->seccionSeleccionada === 'alta_proveedor' && count($this->datosAltaProveedor) > 0) {
         // Verifica si todos los campos necesarios están presentes en al menos una fila
-        $camposNecesarios = ['cbu', 'alias', 'id_tipo', 'tipo_cuenta', 'referencia', 'email', 'titulares'];
+        $camposNecesarios = ['cbu', 'alias', 'id_tipo', 'tipo_cuenta', 'email', 'titulares'];
         $datosFaltantes = [];
 
         foreach ($camposNecesarios as $campo) {
@@ -718,7 +720,6 @@ private function validarIdentificacionCliente($dato)
         }
 
         if (!empty($datosFaltantes)) {
-            dd($datosFaltantes);
             // Al menos un campo necesario está faltante
             $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo! Los siguientes campos son obligatorios: ' . implode(', ', $datosFaltantes);
             $this->mostrarMensajeError = true;
@@ -727,18 +728,60 @@ private function validarIdentificacionCliente($dato)
             return;
         }
 
+        if(isset($fila['cbu'])){
+            $cbu = str_pad($fila['cbu'], 22, '0', STR_PAD_LEFT);
+        }else{
+            $this->datosNoEncontrados();
+        }
+
+        if(isset($fila['alias'])){
+            $alias = str_pad($fila['alias'], 22);
+        }else{
+            $this->datosNoEncontrados();
+        }
+       
+        if(isset($fila['id_tipo'])){
+            $idTipo = $fila['id_tipo'];
+        }else{
+            $this->datosNoEncontrados();
+        }
+
+        if(isset($fila['tipo_cuenta'])){
+           $tipoCuenta = $fila['tipo_cuenta'];     
+        }else{
+            $this->datosNoEncontrados();
+        }
+
+        if(isset($fila['referencia'])){
+           $referencia = str_pad($fila['referencia'], 30);
+        }else{
+            $this->datosNoEncontrados();
+        }
+
+        if(isset($fila['email'])){
+            $email = str_pad($fila['email'], 50);
+        }else{
+            $this->datosNoEncontrados();
+        }
+
+        if(isset($fila['titulares'])){
+            $titulares = $fila['titulares'];
+        }else{
+            $this->datosNoEncontrados();
+        }
+
         // Genera el contenido del archivo TXT
         $contenido = '';
         foreach ($this->datosAltaProveedor as $fila) {
             // Formatea los campos según las longitudes
             $contenido .=
-                str_pad($fila['cbu'], 22, '0', STR_PAD_LEFT) .
-                str_pad($fila['alias'], 22) .
-                $fila['id_tipo'] .
-                $fila['tipo_cuenta'] .
-                str_pad($fila['referencia'], 30) .
-                str_pad($fila['email'], 50) .
-                $fila['titulares'] . "\n";
+                $cbu .
+                $alias .
+                $idTipo .
+                $tipoCuenta .
+                $referencia .
+                $email .
+                $titulares . "\n";
         }
 
         // Agregar el relleno de 134 espacios en blanco
@@ -765,6 +808,14 @@ private function validarIdentificacionCliente($dato)
             ]
         );
     }
+}
+
+public function datosNoEncontrados(){
+    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo! Los siguientes campos son obligatorios: ';
+    $this->mostrarMensajeError = true;
+    $this->mostrarMensajeErrorAltaProveedores = true;
+    $this->intentoDescarga = true;
+    return;
 }
     
     public function descargarDatosRegistroTipo1()
@@ -987,7 +1038,7 @@ private function validarIdentificacionCliente($dato)
         // Verifica que haya datos cargados en datosProcesadosTipo2
         if (count($this->datosProcesadosTipo2) > 0) {
             // Verifica que todos los campos necesarios estén presentes en al menos una fila
-            $camposNecesarios = ['tipo_registro', 'entidad_acreditar', 'sucursal', 'cbu', 'importe', 'referencia', 'identificacion_cliente','clave_fiscal', 'nro_documento', 'estado', 'datos_de_la_empresa', 'identificador_prestamo', 'nro_operacion_link', 'sucursal_acreditar', 'numero_registro_link', 'observaciones'];
+            $camposNecesarios = ['tipo_registro', 'entidad_acreditar', 'sucursal', 'cbu', 'importe','identificacion_cliente', 'nro_documento','sucursal_acreditar'];
     
             $datosFaltantes = [];
     
@@ -1005,7 +1056,7 @@ private function validarIdentificacionCliente($dato)
                     $datosFaltantes[] = $campo;
                 }
             }
-    
+
             if (!empty($datosFaltantes)) {
                 // Al menos un campo necesario está faltante
                 $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';

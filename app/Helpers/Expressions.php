@@ -8,6 +8,6 @@ class Expressions {
     public static $expresionCBU = '/^\d{22}$/';
     public static $expresionCUIT = '/^\d{11}$/';
     public static $expresionImporte = '/^-?[\d.,]+$/';
-    public static $expresionReferencia = '/^[A-Za-z\s]+$/';
+    public static $expresionReferencia = '/^[A-Za-z\s]{0,18}+$/';
     public static $expresionIdentificacionCliente = '/^\d{11}$/';
 }

@@ -710,9 +710,11 @@
                                     <table class="min-w-full overflow-y-auto max-h-[1200px]">
                                         <thead>
                                             <tr>
-                                                <th
-                                                    class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
+                                                <th class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider relative group">
                                                     CBU
+                                                    <div class="popup-mensaje absolute hidden -top-8 left-1/2 transform -translate-x-1/2 bg-gray-700 text-white px-2 py-1 text-center rounded text-xs opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-hover:block">
+                                                        Mensaje de error
+                                                    </div>
                                                 </th>
                                                 <th
                                                     class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
