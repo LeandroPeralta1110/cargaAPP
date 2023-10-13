@@ -279,7 +279,7 @@ public function cargaArchivoTipo1()
             } elseif (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $dato)) {
                 $datosValidados['fecha_pago'] = $dato;
                 $fechaPagoEncontrada = true;
-            } elseif (preg_match('/^\d+$/', $dato)) {
+            } elseif (preg_match('/^\d{4}$|^\d{8}$/', $dato)) {
                 // Si $dato contiene solo números, asignarlo a $codConvenio
                 $datosValidados['codigo_convenio'] = $dato;
                 $codigoConvenioEncontrado = true;
@@ -701,7 +701,7 @@ private function validarIdentificacionCliente($dato)
     // Verifica que la sección actual sea "alta_proveedor" y que haya datos antes de generar el archivo
     if ($this->seccionSeleccionada === 'alta_proveedor' && count($this->datosAltaProveedor) > 0) {
         // Verifica si todos los campos necesarios están presentes en al menos una fila
-        $camposNecesarios = ['cbu', 'alias', 'id_tipo', 'tipo_cuenta', 'email', 'titulares'];
+        $camposNecesarios = ['cbu','id_tipo', 'tipo_cuenta', 'alias', 'cuit','titulares'];
         $datosFaltantes = [];
 
         foreach ($camposNecesarios as $campo) {
@@ -728,59 +728,53 @@ private function validarIdentificacionCliente($dato)
             return;
         }
 
-        if(isset($fila['cbu'])){
-            $cbu = str_pad($fila['cbu'], 22, '0', STR_PAD_LEFT);
-        }else{
-            $this->datosNoEncontrados();
-        }
-
-        if(isset($fila['alias'])){
-            $alias = str_pad($fila['alias'], 22);
-        }else{
-            $this->datosNoEncontrados();
-        }
-       
-        if(isset($fila['id_tipo'])){
-            $idTipo = $fila['id_tipo'];
-        }else{
-            $this->datosNoEncontrados();
-        }
-
-        if(isset($fila['tipo_cuenta'])){
-           $tipoCuenta = $fila['tipo_cuenta'];     
-        }else{
-            $this->datosNoEncontrados();
-        }
-
-        if(isset($fila['referencia'])){
-           $referencia = str_pad($fila['referencia'], 30);
-        }else{
-            $this->datosNoEncontrados();
-        }
-
-        if(isset($fila['email'])){
-            $email = str_pad($fila['email'], 50);
-        }else{
-            $this->datosNoEncontrados();
-        }
-
-        if(isset($fila['titulares'])){
-            $titulares = $fila['titulares'];
-        }else{
-            $this->datosNoEncontrados();
-        }
-
         // Genera el contenido del archivo TXT
         $contenido = '';
         foreach ($this->datosAltaProveedor as $fila) {
+            if(isset($fila['cbu'])){
+                $cbu = str_pad($fila['cbu'], 22, '0', STR_PAD_LEFT);
+            }else{
+                $this->datosNoEncontrados();
+            }
+
+            if(isset($fila['cuit'])){
+                $cuit = str_pad($fila['cuit'], 11, '0', STR_PAD_LEFT);
+            }else{
+                $this->datosNoEncontrados();
+            }
+    
+            if(isset($fila['alias'])){
+                $alias = str_pad($fila['alias'], 22);
+            }else{
+                $this->datosNoEncontrados();
+            }
+           
+            if(isset($fila['id_tipo'])){
+                $idTipo = $fila['id_tipo'];
+            }else{
+                $this->datosNoEncontrados();
+            }
+    
+            if(isset($fila['tipo_cuenta'])){
+               $tipoCuenta = $fila['tipo_cuenta'];     
+            }else{
+                $this->datosNoEncontrados();
+            }
+    
+            if(isset($fila['titulares'])){
+                $titulares = $fila['titulares'];
+            }else{
+                $this->datosNoEncontrados();
+            }
             // Formatea los campos según las longitudes
             $contenido .=
                 $cbu .
+                $cuit .
                 $alias .
                 $idTipo .
                 $tipoCuenta .
-                $referencia .
-                $email .
+                str_pad($fila['referencia'], 30) .
+                str_pad($fila['email'], 50) .
                 $titulares . "\n";
         }
 
@@ -1038,7 +1032,7 @@ public function datosNoEncontrados(){
         // Verifica que haya datos cargados en datosProcesadosTipo2
         if (count($this->datosProcesadosTipo2) > 0) {
             // Verifica que todos los campos necesarios estén presentes en al menos una fila
-            $camposNecesarios = ['tipo_registro', 'entidad_acreditar', 'sucursal', 'cbu', 'importe','identificacion_cliente', 'nro_documento','sucursal_acreditar'];
+            $camposNecesarios = ['tipo_registro', 'entidad_acreditar', 'sucursal', 'cbu','cuit', 'importe','identificacion_cliente', 'nro_documento','sucursal_acreditar'];
     
             $datosFaltantes = [];
     
