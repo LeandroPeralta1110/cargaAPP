@@ -296,9 +296,6 @@ public function cargaArchivoTipo1()
             }
         }
 
-        // Agrega los datos preestablecidos a cada fila
-        $datosValidados += $datosPreestablecidos;
-
         // Agrega los datos procesados solo si todos los campos requeridos están presentes
         if (!empty($datosValidados)){
             $datosArchivoActual[] = $datosValidados;
@@ -340,7 +337,10 @@ public function cargaArchivoTipo1()
 
             $this->datosProcesadosTipo1 = array_merge($this->datosProcesadosTipo1, $datosArchivoActual);
 
-            $this->datosFaltantesTipo1 = $datosNoEncontrados;
+            if(isset($datosNoEncontrados)){
+                $this->datosFaltantesTipo1 = $datosNoEncontrados;
+                $this->datosNoEncontradosTipo1($this->datosFaltantesTipo1);
+            }
 
             $this->registrosArchivos[] = [
                 'nombre_archivo' => $this->archivo->getClientOriginalName(),
@@ -352,20 +352,22 @@ public function cargaArchivoTipo1()
 
             $this->emit('datosTipo1Cargados', count($datosArchivoActual));
 
-            if (!empty($datosNoEncontrados)) {
-                $this->popupMessage = 'Datos no encontrados:<br>';
-            
-                foreach ($datosNoEncontrados as $linea => $camposFaltantes) {
-                    $this->popupMessage .= 'Línea ' . $linea . ': ' . implode(', ', $camposFaltantes) . '<br>';
-                }
-            }
-        
             $this->datosNoEncontrados = $datosNoEncontrados;
 
             return view('livewire.carga-archivo', [
                 'datosNoEncontrados' => $datosNoEncontrados,
                 'datosProcesadosTipo1' => $datosArchivoActual,
             ]);
+        }
+
+        public function datosNoEncontradosTipo1($datosfaltantes){
+            if (!empty($datosfaltantes)) {
+                $this->popupMessage = 'Datos no encontrados:<br>';
+            
+                foreach ($datosfaltantes as $linea => $camposFaltantes) {
+                    $this->popupMessage .= 'Línea ' . $linea . ': ' . implode(', ', $camposFaltantes) . '<br>';
+                }
+            }
         }
 
         public function cargaArchivoTipo2()
@@ -440,7 +442,7 @@ public function cargaArchivoTipo1()
                     } elseif ($this->validarCUIT($dato)) {
                         $datosValidados['cuit'] = $dato;
                         $cuitEncontrado = true;
-                    } elseif (!$importeEncontrado && preg_match('/-?\d+,\d{2}/', $dato)) {
+                    } elseif (!$importeEncontrado && $this->validarImporte($dato)) {
                         $importe = preg_replace('/[^0-9.,$-]/', '', $dato);
                         // Remover signos negativos
                         $importe = str_replace('-', '', $importe);
@@ -492,13 +494,14 @@ public function cargaArchivoTipo1()
                     $datosNoEncontrados[$contadorLinea] = $camposFaltantes;
                 }
             }
-
-                $contadorRegistrosTipo2++;
             }
 
             $this->datosProcesadosTipo2 = array_merge($this->datosProcesadosTipo2, $datosArchivoActual);
 
-            $this->datosFaltantesTipo2 = $datosNoEncontrados;
+            if(!empty($datosNoEncontrados)){
+                $this->datosFaltantesTipo2 = $datosNoEncontrados;
+                $this->noEncontradosTipo2($this->datosFaltantesTipo2);
+            }
 
             $this->registrosArchivos[] = [
                 'identificador_tipo2' => $identificadorTipo2,
@@ -507,19 +510,9 @@ public function cargaArchivoTipo1()
                 'datos' => $datosArchivoActual,
             ];
 
-            $this->totalImporteTipo2 = array_sum(array_column($datosArchivoActual, 'importe'));
             $this->mostrarDatosTipo2 = true;
 
             $this->emit('datosTipo2Cargados', $this->totalImporteTipo2, count($datosArchivoActual));
-
-            if (!empty($datosNoEncontrados)) {
-                $this->popupMessage = 'Datos no encontrados:<br>';
-
-                foreach ($datosNoEncontrados as $linea => $camposFaltantes) {
-                    $camposFaltantesUnicos = array_unique($camposFaltantes);
-                    $this->popupMessage .= 'Línea ' . $linea . ': ' . implode(', ', $camposFaltantesUnicos) . '<br>';
-                }
-            }
 
             $this->datosNoEncontrados = $datosNoEncontrados;
 
@@ -527,6 +520,17 @@ public function cargaArchivoTipo1()
                 'datosNoEncontrados' => $datosNoEncontrados,
                 'datosProcesadosTipo2' => $datosArchivoActual,
             ]);
+        }
+
+        public function noEncontradosTipo2($datosFaltantes){
+            if (!empty($datosFaltantes)) {
+                $this->popupMessage = 'Datos no encontrados:<br>';
+
+                foreach ($datosFaltantes as $linea => $camposFaltantes) {
+                    $camposFaltantesUnicos = array_unique($camposFaltantes);
+                    $this->popupMessage .= 'Línea ' . $linea . ': ' . implode(', ', $camposFaltantesUnicos) . '<br>';
+                }
+            }
         }
 
 private function validarEntidad($dato)
@@ -556,7 +560,7 @@ private function validarCUIT($dato)
 private function validarImporte($dato)
 {
     // Realiza la validación para Importe aquí, devuelve true si es válido, false en caso contrario
-    return preg_match(Expressions::$expresionImporte, $dato);
+    return preg_match('/-?\d+,\d{2}/', $dato);
 }
 
 private function validarReferencia($dato)

@@ -7,6 +7,11 @@ html {
     margin: 0;
     padding: 0;
 }
+
+.header a.no-underline {
+    text-decoration: none;
+  }
+
 .custom-btn {
     /* Establece el ancho y alto deseado para los elementos */
     width: 150px;
@@ -20,7 +25,6 @@ html {
 
 .imagenfondo {
     background-image: url("../../public/images/vortex-image.jpg");
-    min-height: 666px;
 }
 
 .popup-container {
@@ -79,4 +83,11 @@ html {
     visibility: visible;
     opacity: 1;
 }
+
+.bg-gradient {
+    background: linear-gradient(to bottom, #FFFFFF, #5A67D8);
+}
+
+
+  
 

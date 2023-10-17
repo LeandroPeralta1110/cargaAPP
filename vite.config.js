@@ -2,12 +2,12 @@ import { defineConfig } from 'vite';
 import laravel, { refreshPaths } from 'laravel-vite-plugin';
 
 export default defineConfig({
-    /* server: {
+   server: {
         // Cambia la dirección a la dirección IP de tu servidor y el puerto de Vite
-        host: '192.168.0.155', // Cambia a la dirección IP de tu servidor
+        host: '192.168.0.118', // Cambia a la dirección IP de tu servidor
         port: 5173, // Cambia al puerto que estás utilizando
         hot: true,
-    }, */
+    },
     plugins: [
         laravel({
             input: [
