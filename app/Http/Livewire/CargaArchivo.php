@@ -2,11 +2,7 @@
 //Componente donde se ecuentra toda la logica de el programa, tanto la carga, descarga y eliminacion de archivos.
 
 namespace App\Http\Livewire;
-
-use ReflectionClass;
 use App\Helpers\Expressions;
-use DateTime;
-use Illuminate\Database\Query\Expression;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -35,22 +31,7 @@ class CargaArchivo extends Component
     public $identificadorUnicoCargadoTipo2;
     public $datosCargadosTipo2 = [];
     public $identificadorTipo2;
-    public $popupMessage = '';
-    public $errores = [];
-    public $datosNoEncontrados = [];
-    public $datosFaltantes = [];
-    public $mostrarMensajeDatosFaltantes = false;
-    public $mensajeError = '';
-    public $mostrarMensajeError = false;
-    public $intentoDescarga = false;
-    public $datosFaltantesTipo2 = [];
-    public $datosFaltantesTipo1 = [];
-    public $mostrarMensajeErrorTipo1 = false;
-    public $mostrarMensajeErrorTipo2 = false;
-    public $mostrarMensajeErrorAltaProveedores = false;
-    public $datosNoEncontradosAltaProveedor = [];
-    public $mostrarDatosFaltantesTipo1 = [];
-    public $popupMessageAltaProveedor = [];
+    private $expresionesRegulares = [];
 
     public $ultimoArchivo = [];
     public $cantidadDatos = 0; 
@@ -76,512 +57,390 @@ class CargaArchivo extends Component
     //secciones para el tipo de pago, predefinido alta proveedores
     public $seccionSeleccionada = "alta_proveedor";
 
-    public function procesarArchivosAltaProveedores()
+    public function cargarArchivoAltaProveedor()
     {
         $this->validate([
             'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
         ]);
-    
-        $datosNoEncontrados = [];
-        $datosArchivoActual = [];
-    
+        $this->mostrarDatosAltaProveedor = false;
+        // Obtener el contenido del archivo
         $contenido = file_get_contents($this->archivo->getRealPath());
-        $lineas = explode("\n", $contenido);
-    
-        $contadorRegistrosAltaProveedor = 0;
-        $contadorLinea = 0;
-    
-        foreach ($lineas as $linea) {
-            // Incrementa el contador de línea
-            $contadorLinea++;
-    
-            // Dividir la línea en elementos usando el punto y coma como separador
-            $datos = str_getcsv($linea, ';');
-    
-            // Inicializa variables para verificar si se han encontrado los campos requeridos
-            $cbuEncontrado = false;
-            $aliasEncontrado = false;
-            $idTipoEncontrado = false;
-            $cuitEncontrado = false;
-            $tipoCuentaEncontrado = false;
-            $referenciaEncontrada = false;
-            $emailEncontrado = false;
-    
-            // Arreglo para los datos validados
-            $datosValidados = [];
-            $camposFaltantes = []; 
 
-            $datosValidados = [
-                'titulares' => '1',
-            ];
-    
-            foreach ($datos as $key => $dato) {
-                // Realiza la validación específica para cada tipo de dato
-                // CBU
-                if ($this->validarCBU($dato)) {
-                    $datosValidados['cbu'] = $dato;
-                    $cbuEncontrado = true;
-                } elseif ($dato === '1' || $dato === '2'|| $dato === '3') { // Id Tipo Clave
-                    $datosValidados['id_tipo'] = $dato;
-                    $idTipoEncontrado = true;
-                } elseif (in_array($dato, ['01', '02', '03', '04', '05', '06', '07'])) { // Tipo de Cuenta
-                    $datosValidados['tipo_cuenta'] = $dato;
-                    $tipoCuentaEncontrado = true;
-                } elseif ($this->validarCUIT($dato)) { // CUIT
-                    $datosValidados['cuit'] = $dato;
-                    $cuitEncontrado = true;
-                }elseif (preg_match('/^[A-Za-z0-9.]{0,22}$/', $dato)) { // Alias
-                    $alias = substr($dato, 0, 22);
-                    $alias = str_repeat('0', 22);
-                    $datosValidados['alias'] = $alias;
-                    $aliasEncontrado = true;
-                }elseif (preg_match('/^[A-Za-z0-9\s]{0,30}$/', $dato)) { // Referencia
-                    $referencia = substr($dato, 0, 30);
-                    $referencia = str_pad($referencia, 30, ' ', STR_PAD_RIGHT);
-                    $datosValidados['referencia'] = $referencia;
-                    $referenciaEncontrada = true;
-                } elseif (preg_match('/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/', $dato)) { // Email
-                    $email = substr($dato, 0, 50);
-                    $email = str_pad($email, 50, ' ', STR_PAD_RIGHT);
-                    $datosValidados['email'] = $email;
-                    $emailEncontrado = true;
-                }
+         // Determinar el tipo de archivo según la extensión
+        $extension = $this->archivo->getClientOriginalExtension();
 
-                if (!$emailEncontrado) {
-                    $datosValidados['email'] = str_repeat(' ', 50);
-                }
-
-                if (!$referenciaEncontrada) {
-                    $datosValidados['referencia'] = str_repeat(' ', 30);
-                }
-            }
-                
-            // Verifica si todos los campos requeridos se encontraron
-            if (!empty($datosValidados)){
-                $datosArchivoActual[] = $datosValidados;
-
-                if (!$cbuEncontrado) {
-                    $camposFaltantes[] = "CBU";
-                }
-                if (!$aliasEncontrado) {
-                    $camposFaltantes[] = "Alias";
-                }
-                if (!$idTipoEncontrado) {
-                    $camposFaltantes[] = "Id Tipo Clave";
-                }
-                if (!$cuitEncontrado) {
-                    $camposFaltantes[] = "CUIT";
-                }
-                if (!$tipoCuentaEncontrado) {
-                    $camposFaltantes[] = "Tipo de Cuenta";
-                }
-                if(!empty($camposFaltantes)){
-                    $datosNoEncontrados[$contadorLinea] = $camposFaltantes;
-                }
-            }
-            $contadorRegistrosAltaProveedor++;
+        // Procesar el contenido según la extensión
+        if ($extension === 'csv' || $extension === 'txt') {
+            // Procesar archivo CSV o TXT
+            $lineas = explode("\n", $contenido);
+            $this->procesarArchivoTipo1CSVoTXT($lineas);
+        }elseif($extension === 'xlsx'){
+             // Cargar el archivo Excel y obtener sus datos
+            $this->procesarArchivoExcel($this->archivo);
         }
-        $this->datosAltaProveedor = array_merge($this->datosAltaProveedor, $datosArchivoActual);
-        $this->datosNoEncontradosAltaProveedor = $datosNoEncontrados;
-    
+    }
+
+    public function procesarArchivoTipo1CSVoTXT($lineas){
+        $datosArchivoActual = [];
+        foreach ($lineas as $linea) {
+            $datos = str_getcsv($linea, ','); // Dividir la línea en elementos usando la coma como separador
+
+            // Eliminar guiones y espacios en blanco de la cadena de CBU
+            $cbu = str_replace(['-', ' '], '', $datos[0]);
+
+            // Asegurarse de que la longitud del CBU sea de 22 caracteres
+            $cbu = str_pad($cbu, 22, '0', STR_PAD_LEFT);
+
+            // Determinar el valor de $alias
+            if (isset($datos[1])) {
+                // El índice 1 existe en $datos, puedes acceder a $datos[1]
+                $alias = $datos[1] ? str_repeat('0', 22) : str_repeat(' ', 22);
+            } else {
+                // El índice 1 no existe en $datos, proporciona un valor predeterminado o maneja el caso de error según sea necesario
+                // Por ejemplo, aquí estableceremos un valor predeterminado para $alias
+                $alias = str_repeat(' ', 22); // Valor predeterminado si no hay un valor en $datos[1]
+            }
+
+           // Verificar si $datos tiene al menos 3 elementos antes de acceder a $datos[2]
+            if (isset($datos[2])) {
+                // El índice 2 existe en $datos, puedes acceder a $datos[2]
+                $idTipo = str_pad($datos[2], 1);
+            }
+
+            if(isset($datos[3])){
+               // Eliminar caracteres especiales y asegurarse de que la longitud de la clave de cuenta sea de 11 caracteres
+            $claveCuenta = preg_replace('/[^0-9]/', '', $datos[3]);
+            $claveCuenta = str_pad($claveCuenta, 11, '0', STR_PAD_LEFT); 
+            }
+            
+            if(isset($datos[4])){
+            $tipoCuenta = str_pad($datos[4], 2);
+            }
+
+            if(isset($datos[5])){
+                $referenciaCuenta = str_pad($datos[5], 30); 
+            }
+            
+            if(isset($datos[6])){
+                $email = str_pad($datos[6], 50);
+            }
+            
+            $titulares = '1'; // Valor fijo para Titulares
+
+            // Agregar los datos a la lista
+            if ($this->seccionSeleccionada === 'alta_proveedor') {
+                $this->datosAltaProveedor[] = [
+                    'cbu' => $cbu,
+                    'alias' => $alias,
+                    'id_tipo' => $idTipo,
+                    'clave_cuenta' => $claveCuenta,
+                    'tipo_cuenta' => $tipoCuenta,
+                    'referencia_cuenta' => $referenciaCuenta,
+                    'email' => $email,
+                    'titulares' => $titulares,
+                ];
+
+                $datosArchivoActual[] = [
+                    'cbu' => $cbu,
+                    'alias' => $alias,
+                    'id_tipo' => $idTipo,
+                    'clave_cuenta' => $claveCuenta,
+                    'tipo_cuenta' => $tipoCuenta,
+                    'referencia_cuenta' => $referenciaCuenta,
+                    'email' => $email,
+                    'titulares' => $titulares,
+                ];
+            }
+        }
+        // Almacenar los últimos registros procesados en $ultimosRegistros
+        $this->ultimosRegistros = $datosArchivoActual;
+
         $this->registrosArchivos[] = [
             'nombre_archivo' => $this->archivo->getClientOriginalName(),
             'tipo_registro' => 'Alta Proveedores',
-            'datos' => $datosArchivoActual,
+            'datos' => $datosArchivoActual, // Almacena los datos procesados del archivo actual
         ];
-    
         $this->mostrarDatosAltaProveedor = true;
-    
-        $this->emit('datosAltaProveedorCargados', count($datosArchivoActual));
-    
-        if (!empty($datosNoEncontrados)) {
-            $this->popupMessage = 'Datos no encontrados:<br>';
+    }
+
+    public function procesarArchivoExcel($archivo)
+    {   
+        $spreadsheet = IOFactory::load($archivo);
+        $worksheet = $spreadsheet->getActiveSheet();
+        $datos = [];
+
+        foreach ($worksheet->getRowIterator() as $row) {
+            $fila = [];
+            foreach ($row->getCellIterator() as $cell) {
+                $datos[] = $cell->getValue();
+            }
+            
+            $cbu = str_replace(['-', ' '], '', $datos[0]);
+            $cbu = str_pad($cbu, 22, '0', STR_PAD_LEFT);
+            
+            $alias = isset($datos[1]) ? ($datos[1] ? str_repeat('0', 22) : str_repeat(' ', 22)) : str_repeat(' ', 22);
         
-            foreach ($datosNoEncontrados as $linea => $camposFaltantes) {
-                $this->popupMessage .= 'Línea ' . $linea . ': ' . implode(', ', $camposFaltantes) . '<br>';
+            $idTipo = isset($datos[2]) ? str_pad($datos[2], 1) : null;
+        
+            if (isset($datos[3])) {
+                $claveCuenta = preg_replace('/[^0-9]/', '', $datos[3]);
+                $claveCuenta = str_pad($claveCuenta, 11, '0', STR_PAD_LEFT);
+            } else {
+                $claveCuenta = null;
+            }
+        
+            $tipoCuenta = isset($datos[4]) ? str_pad($datos[4], 2) : null;
+        
+            $referenciaCuenta = isset($datos[5]) ? str_pad($datos[5], 30) : null;
+        
+            $email = isset($datos[6]) ? str_pad($datos[6], 50) : null;
+        
+            $titulares = '1'; 
+            
+            // Agregar los datos a la lista (ajusta el nombre de la propiedad según corresponda)
+            if ($this->seccionSeleccionada === 'alta_proveedor') {
+                $this->datosAltaProveedor[] = [
+                    'cbu' => $cbu,
+                    'alias' => $alias,
+                    'id_tipo' => $idTipo,
+                    'clave_cuenta' => $claveCuenta,
+                    'tipo_cuenta' => $tipoCuenta,
+                    'referencia_cuenta' => $referenciaCuenta,
+                    'email' => $email,
+                    'titulares' => $titulares,
+                ];
+
+                $datosArchivoActual[] = [
+                    'cbu' => $cbu,
+                    'alias' => $alias,
+                    'id_tipo' => $idTipo,
+                    'clave_cuenta' => $claveCuenta,
+                    'tipo_cuenta' => $tipoCuenta,
+                    'referencia_cuenta' => $referenciaCuenta,
+                    'email' => $email,
+                    'titulares' => $titulares,
+                ];
             }
         }
     
-        return view('livewire.carga-archivo', [
-            'datosNoEncontradosAltaProveedor' => $datosNoEncontrados,
-            'datosAltaProveedor' => $datosArchivoActual,
-        ]);
-    }    
+    $this->registrosArchivos[] = [
+        'nombre_archivo' => $this->archivo->getClientOriginalName(),
+        'tipo_registro' => 'Alta Proveedores',
+        'datos' => $datosArchivoActual, // Almacena los datos procesados del archivo actual
+    ];
+    // Establecer $mostrarDatos solo si se cargaron datos en la sección "Alta a Proveedores"
+    if ($this->seccionSeleccionada === 'alta_proveedor') {
+        $this->mostrarDatosAltaProveedor = true;
+    }
+}
 
-public function cargaArchivoTipo1()
+public function cargaArchivoTipo2()
 {
     $this->validate([
         'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
     ]);
 
-    $datosNoEncontrados = [];
-    $datosArchivoActual = [];
-
+    // Obtener el contenido del archivo
     $contenido = file_get_contents($this->archivo->getRealPath());
     $lineas = explode("\n", $contenido);
+    $primeraFila = trim($lineas[0]); // Asumiendo que la primera fila contiene el formato
 
-    $contadorRegistrosTipo1 = 0;
-    $contadorLinea = 0;
+    $expresionesRegulares = [];
+
+    // Generar las expresiones regulares desde la primera fila
+    $expresionesRegulares = $this->generarExpresionesRegularesDesdeFila($primeraFila, $expresionesRegulares);
+
+    // Verificar si se generaron correctamente las expresiones regulares
+    if (empty($expresionesRegulares) || count($expresionesRegulares) === 0) {
+        // Las expresiones regulares no se generaron correctamente, muestra un mensaje de error
+        return redirect()->back()->withErrors(['error' => 'No se pudieron generar las expresiones regulares correctamente.']);
+    }
+
+    // Ahora que las expresiones regulares se han generado, procede con la carga de datos
+    $this->procesarArchivo($lineas, $expresionesRegulares);
+}
+
+public function procesarArchivo($lineas, $expresionesRegulares)
+{
+    $totalImporte = 0;
+    $datosCargadosTemporal = [];
+    $contadorRegistrosTipo2 = 0;
+    $identificadorUnico = uniqid();
+    $totalImporteTipo2Formateado = 0;
+    $tipoRegistro = '2';
+    $entidad = '';
+    $sucursal = '';
+    $identificadorTipo2 = uniqid();
+    $this->identificadorTipo2 = $identificadorTipo2;
+
+    $datosArchivoActual = [];
+    $datosFaltantes = [];
 
     foreach ($lineas as $linea) {
-        // Incrementa el contador de línea
-        $contadorLinea++;
+        // Verificar si la línea no está vacía
+        if (!empty($linea)) {
+            // Dividir la línea en elementos usando el punto y coma como separador
+            $datos = explode(';', $linea);
 
-        // Dividir la línea en elementos usando el punto y coma como separador
-        $datos = str_getcsv($linea, ';');
+            // Verificar si hay la misma cantidad de campos que expresiones regulares
+            if (count($datos) === count($expresionesRegulares)) {
+                $datosValidos = true;
+                // Itera sobre cada campo y verifica si coincide con su expresión regular correspondiente
+                // Itera sobre cada campo y verifica si coincide con su expresión regular correspondiente
+                foreach ($datos as $indice => $dato) {
+                    $expresionRegular = $expresionesRegulares[$indice];
 
-        // Inicializa datos preestablecidos con ceros
-        $datosPreestablecidos = [
-            'tipo_pagos' => 'MIN',
-            'clase_pagos' => '2',
-            'sistema_original' => str_repeat(' ',2),
-            'filler' => str_repeat(' ', 15),
-            'casa_envio_rendicion' => str_repeat(' ', 4),
-            'filler_100' => str_repeat(' ', 100),
-        ];
-
-        $datosValidados = [
-            'tipo_registro' => '1',
-        ];
-
-        $cbuEncontrado = false;
-        $cuitEncontrado = false;
-        $monedaEncontrada = false;
-        $cuentaSucursalEncontrada = false;
-        $fechaPagoEncontrada = false;
-        $infoCriterioEmpresaEncontrada = false;
-        $codigoConvenioEncontrado = false;
-        $numeroEnvioEncontrado = false;
-
-        $camposFaltantes = [];
-
-        // Inicializa los contadores
-        $contadorMoneda = 0;
-        $contadorNumeroEnvio = 0;
-
-        foreach ($datos as $dato) {
-            if ($this->validarCBU($dato)) {
-                $datosValidados['cbu'] = $dato;
-                $cbuEncontrado = true;
-                $cuentaSucursalEncontrada = true;
-                // Divide el CBU en entidad y sucursal
-                $entidad = substr($dato, 4, 3);
-                $datosValidados['entidad_acreditar'] = $entidad;
-            } elseif ($this->validarCUIT($dato)) {
-                $datosValidados['cuit'] = $dato;
-                $cuitEncontrado = true;
-            }if ($monedaEncontrada === false && ($dato === '0' || $dato === '1')) {
-                $datosValidados['moneda'] = $dato;
-                $monedaEncontrada = true;
-            } elseif ($numeroEnvioEncontrado === false && ($dato === '1' || $dato === '2')) {
-                $datosValidados['numero_envio'] = $dato;
-                $numeroEnvioEncontrado = true;
-            } elseif (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $dato)) {
-                $datosValidados['fecha_pago'] = $dato;
-                $fechaPagoEncontrada = true;
-            } elseif (preg_match('/^\d{4}$|^\d{8}$/', $dato)) {
-                // Si $dato contiene solo números, asignarlo a $codConvenio
-                $datosValidados['codigo_convenio'] = $dato;
-                $codigoConvenioEncontrado = true;
-            } elseif (preg_match('/^[a-zA-Z\s]+$/', $dato)) {
-                // Si $dato contiene solo letras y espacios, asignarlo a $infoCriterioEmpresa
-                $datosValidados['info_criterio_empresa'] = $dato;
-                $infoCriterioEmpresaEncontrada = true;
-            } elseif (preg_match('/^[12]$/', $dato)) {
-                if ($contadorNumeroEnvio == 0) {
-                    $datosValidados['numero_envio'] = $dato;
-                    $numeroEnvioEncontrado = true;
-                    $contadorNumeroEnvio++;
-                }
-            }
-        }
-
-        // Agrega los datos procesados solo si todos los campos requeridos están presentes
-        if (!empty($datosValidados)){
-            $datosArchivoActual[] = $datosValidados;
-
-            if (!$cbuEncontrado) {
-                $camposFaltantes[] = "CBU";
-            }
-
-            if (!$cuitEncontrado) {
-                $camposFaltantes[] = "CUIT";
-            }
-
-            if (!$monedaEncontrada) {
-                $camposFaltantes[] = "Moneda";
-            }
-
-            if (!$fechaPagoEncontrada) {
-                $camposFaltantes[] = "Fecha de Pago";
-            }
-
-            if (!$infoCriterioEmpresaEncontrada) {
-                $camposFaltantes[] = "Información de Criterio de Empresa";
-            }
-
-            if (!$codigoConvenioEncontrado) {
-                $camposFaltantes[] = "Código de Convenio";
-            }
-
-            if (!$numeroEnvioEncontrado) {
-                $camposFaltantes[] = "Número de Envío";
-            }
-            
-            if(!empty($camposFaltantes)){
-                $datosNoEncontrados[$contadorLinea] = $camposFaltantes;
-            }
-        }
-                $contadorRegistrosTipo1++;
-            }
-
-            $this->datosProcesadosTipo1 = array_merge($this->datosProcesadosTipo1, $datosArchivoActual);
-
-            if(isset($datosNoEncontrados)){
-                $this->datosFaltantesTipo1 = $datosNoEncontrados;
-                $this->datosNoEncontradosTipo1($this->datosFaltantesTipo1);
-            }
-
-            $this->registrosArchivos[] = [
-                'nombre_archivo' => $this->archivo->getClientOriginalName(),
-                'tipo_registro' => 'Registros tipo 1',
-                'datos' => $datosArchivoActual,
-            ];
-
-            $this->mostrarDatosTipo1 = true;
-
-            $this->emit('datosTipo1Cargados', count($datosArchivoActual));
-
-            $this->datosNoEncontrados = $datosNoEncontrados;
-
-            return view('livewire.carga-archivo', [
-                'datosNoEncontrados' => $datosNoEncontrados,
-                'datosProcesadosTipo1' => $datosArchivoActual,
-            ]);
-        }
-
-        public function datosNoEncontradosTipo1($datosfaltantes){
-            if (!empty($datosfaltantes)) {
-                $this->popupMessage = 'Datos no encontrados:<br>';
-            
-                foreach ($datosfaltantes as $linea => $camposFaltantes) {
-                    $this->popupMessage .= 'Línea ' . $linea . ': ' . implode(', ', $camposFaltantes) . '<br>';
-                }
-            }
-        }
-
-        public function cargaArchivoTipo2()
-        {
-            $this->validate([
-                'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
-            ]);
-
-            $datosNoEncontrados = [];
-            $datosArchivoActual = [];
-
-            $contenido = file_get_contents($this->archivo->getRealPath());
-            $lineas = explode("\n", $contenido);
-
-            $identificadorTipo2 = uniqid();
-            $this->identificadorTipo2 = $identificadorTipo2;
-
-            $contadorRegistrosTipo2 = 0;
-            $contadorLinea = 0;
-
-            foreach ($lineas as $linea) {
-                // Incrementa el contador de línea
-                $contadorLinea++;
-            
-                // Dividir la línea en elementos usando el punto y coma como separador
-                $datos = str_getcsv($linea, ';');
-            
-                // Inicializa datos preestablecidos con ceros
-                $datosPreestablecidos = [
-                    'identificacion_cliente'=> '1',
-                    'clase_documento' => '0',
-                    'tipo_documento' => '00',
-                    'uso_BNA'=> '00',
-                    'nro_documento' => str_repeat('0',11),
-                    'estado' => '00',
-                    'datos_de_la_empresa' => str_repeat(' ',13),
-                    'cuil_con_ceros'=> str_repeat('0',11),
-                    'identificador_prestamo' => '0000',
-                    'nro_operacion_link' => str_repeat( ' ',9),
-                    'sucursal' => str_repeat(' ', 4),
-                    'numero_registro_link' => str_repeat(' ',6),
-                    'observaciones' => str_repeat(' ',15),
-                    'filler' => str_repeat(' ',62),
-                ];
-            
-                $datosValidados = [
-                    'tipo_registro' => '2',
-                    'identificador_tipo2' => $identificadorTipo2,
-                ];
-            
-                $cbuEncontrado = false; // Variable para verificar si se encontró CBU en esta línea
-                $entidadEncontrada = false;
-                $cuentaSucursalEncontrada = false;
-                $cuitEncontrado = false;
-                $importeEncontrado = false;
-                $referenciaEncontrada = false;
-                $identificacionClienteEncontrada = false;
-                $camposFaltantes = [];
-            
-                foreach ($datos as $key => $dato) {
-                    // Realiza la validación específica para cada tipo de dato
-                    if ($this->validarCBU($dato)) {
-                        $datosValidados['cbu'] = $dato; 
-                        $cbuEncontrado = true;
-                        $entidadEncontrada = true;
-                        $cuentaSucursalEncontrada = true;
-                        // Divide el CBU en entidad y sucursal
-                        $entidad = substr($dato, 0, 3);
-                        $sucursal = substr($dato, 4, 3);
-                        $datosValidados['entidad_acreditar'] = $entidad;
-                        $datosValidados['sucursal_acreditar'] = $sucursal;
-                    } elseif ($this->validarCUIT($dato)) {
-                        $datosValidados['cuit'] = $dato;
-                        $cuitEncontrado = true;
-                    } elseif (!$importeEncontrado && $this->validarImporte($dato)) {
-                        $importe = preg_replace('/[^0-9.,$-]/', '', $dato);
-                        // Remover signos negativos
-                        $importe = str_replace('-', '', $importe);
-                        // Agregar el signo de peso al importe
-                        $datosValidados['importe'] = '$' . $importe;
-                        $importeEncontrado = true;
-                    } elseif ($this->validarReferencia($dato)) {
-                        $datosValidados['referencia'] = $dato;
-                        $referenciaEncontrada = true;
-                    }
-                
-                    // Verifica si la referencia no se encontró y la establece en 15 espacios en blanco
-                    if (!$referenciaEncontrada) {
-                        $datosValidados['referencia'] = str_repeat(' ', 15);
+                    if (preg_match($expresionRegular, $dato, $matches)) {
+                        // El dato coincide con el formato esperado, lo almacenamos
+                        $datosCapturados[] = $matches[0];
+                    } else {
+                        // El dato no coincide con el formato esperado
+                        $datosValidos = false;
+                        $datosFaltantes[] = [
+                            'campo' => $indice + 1,
+                            'valor' => $dato,
+                        ];
+                        break;
                     }
                 }
-            
-                // Agrega los datos preestablecidos a cada fila
-                $datosValidados += $datosPreestablecidos;
-            
-                if (!empty($datosValidados)){
-                    $datosArchivoActual[] = $datosValidados;
-                // Agrega los datos procesados solo si todos los campos requeridos están presentes
-                if (!$cbuEncontrado) {
-                    $camposFaltantes[] = "CBU";
+
+                if ($datosValidos) {
+                    $entidadAcreditar = 011;
+                    $cuentaAcreditar = 599;
+    
+                    $entidadAcreditar = str_pad($entidadAcreditar, 4, '0', STR_PAD_LEFT);
+                    $cuentaAcreditar = str_pad($cuentaAcreditar, 4, '0', STR_PAD_LEFT);
+    
+                    $cbu = '01105998-30000565884328';
+    
+                    $partes = explode("-", $cbu);
+                    $primerBloque = $partes[0];
+                    $segundoBloque = $partes[1];
+    
+                    // Extraer el último número del primer bloque
+                    $ultimoNumeroPrimerBloque = substr($primerBloque, -1);
+    
+                    // Obtener todos los números del segundo bloque
+                    $numerosSegundoBloque = preg_replace("/[^0-9]/", "", $segundoBloque);
+    
+                    /* if (!empty($fila['sucursal_acreditar'])) {
+                        $sucursal = str_pad($datos['sucursal_acreditar'], 4, '0', STR_PAD_LEFT);
+                    } */
+                    $referencia = 'Pago Proveedores';
+    
+                    $identificacionCliente = rand(1, 3);
+                    $cuil = $datos[2];
+                    $cuil = str_pad($cuil, strlen($cuil) + 10);
+                    $importeOriginal = $datos[5];
+    
+                    // Elimina el símbolo "$" y las comas de la cadena de importe
+                    $importeLimpio = str_replace(['$', ','], '', $importeOriginal);
+    
+                    // Convierte la cadena en un número entero positivo
+                    $importeEntero = abs((int)$importeLimpio);
+    
+                    // Divide el número por 100 para obtener el valor en dólares y centavos
+                    $importeDecimal = $importeEntero / 100;
+    
+                    if (!empty($datos[8])) {
+                        $datosEmpresa = $datos[8];
+                    } else {
+                        // Si el último dato de la fila está vacío, llenarlo con 13 espacios en blanco
+                        $datosEmpresa = str_pad('', 13);
+                    }
+    
+                    // Formatea el número como moneda, agregando el símbolo de moneda al inicio
+                    $importeFormateado = "$" . number_format($importeDecimal, 2, ',', '.');
+                    $claseDocumento = '0';
+                    $tipoDocumentoBeneficiario = '00';
+                    $usoBNA = '00';
+                    $nroDocumentoBeneficiario = str_pad('0',11);
+                    $cuilConCeros = str_pad('0',11);
+                    $estado = '00';
+                    $identificadorPrestamo = '0000';
+                    $nroOperacionLink = str_pad('0',9);
+                    $sucursalAcreditar = '0000';
+                    $nroRegistro = str_pad('0',6);
+                    $observaciones = str_pad('0',15);
+                    $filler = str_pad('0',62);
+    
+                    $datosArchivoActual[] = $datosCapturados;
+                    // Incrementar el contador de registros Tipo 2
+                    $contadorRegistrosTipo2++;
                 }
-
-                if (!$entidadEncontrada) {
-                    $camposFaltantes[] = "COD.ENTIDAD";
-                }
-
-                if (!$cuentaSucursalEncontrada) {
-                    $camposFaltantes[] = "COD.SUCURSAL";
-                }
-
-                if (!$cuitEncontrado) {
-                    $camposFaltantes[] = "CUIT";
-                }
-
-                if (!$importeEncontrado) {
-                    $camposFaltantes[] = "IMPORTE";
-                }
-
-                /* if (!$identificacionClienteEncontrada) {
-                    $camposFaltantes[] = "IDENTIFICACION CLIENTE";
-                } */
-
-                if(!empty($camposFaltantes)){
-                    $datosNoEncontrados[$contadorLinea] = $camposFaltantes;
-                }
-            }
-            }
-
-            $this->datosProcesadosTipo2 = array_merge($this->datosProcesadosTipo2, $datosArchivoActual);
-
-            if(!empty($datosNoEncontrados)){
-                $this->datosFaltantesTipo2 = $datosNoEncontrados;
-                $this->noEncontradosTipo2($this->datosFaltantesTipo2);
-            }
-
-            $this->registrosArchivos[] = [
-                'identificador_tipo2' => $identificadorTipo2,
-                'nombre_archivo' => $this->archivo->getClientOriginalName(),
-                'tipo_registro' => 'Registros tipo 2',
-                'datos' => $datosArchivoActual,
-            ];
-
-            $this->mostrarDatosTipo2 = true;
-
-            $this->emit('datosTipo2Cargados', $this->totalImporteTipo2, count($datosArchivoActual));
-
-            $this->datosNoEncontrados = $datosNoEncontrados;
-
-            return view('livewire.carga-archivo', [
-                'datosNoEncontrados' => $datosNoEncontrados,
-                'datosProcesadosTipo2' => $datosArchivoActual,
-            ]);
-        }
-
-        public function noEncontradosTipo2($datosFaltantes){
-            if (!empty($datosFaltantes)) {
-                $this->popupMessage = 'Datos no encontrados:<br>';
-
-                foreach ($datosFaltantes as $linea => $camposFaltantes) {
-                    $camposFaltantesUnicos = array_unique($camposFaltantes);
-                    $this->popupMessage .= 'Línea ' . $linea . ': ' . implode(', ', $camposFaltantesUnicos) . '<br>';
-                }
+            } else {
+                // Si los datos no coinciden con el formato actual, actualiza las expresiones regulares
+                $expresionesRegulares = $this->generarExpresionesRegularesDesdeFila($linea, $expresionesRegulares);
             }
         }
+    }
 
-private function validarEntidad($dato)
-{
-    // Realiza la validación para entidad aquí, devuelve true si es válido, false en caso contrario
-    return preg_match(Expressions::$expresionEntidad, $dato);
+    // Al final del procesamiento exitoso, agregar los datos cargados a $this->datosProcesadosTipo2
+    $this->datosProcesadosTipo2 = array_merge($this->datosProcesadosTipo2, $datosArchivoActual);
+
+    // Agrega una copia de los datos procesados al array $this->registrosArchivos
+    $this->registrosArchivos[] = [
+        'identificador_tipo2' => $identificadorTipo2,
+        'nombre_archivo' => $this->archivo->getClientOriginalName(),
+        'tipo_registro' => 'Registros tipo 2',
+        'datos' => $datosArchivoActual,
+    ];
+    // Guardar el total de importe para su uso posterior
+    $this->totalImporteTipo2 = $totalImporte;
+    $this->mostrarDatosTipo2 = true;
+
+    // Emitir un evento con los datos para cargaArchivoTipo3
+    $this->emit('datosTipo2Cargados', $this->totalImporteTipo2, $contadorRegistrosTipo2);
 }
 
-private function validarCuentaSucursal($dato)
+public function generarExpresionesRegularesDesdeFila($fila, $expresionesRegulares)
 {
-    // Realiza la validación para CuentaSucursal aquí, devuelve true si es válido, false en caso contrario
-    return preg_match(Expressions::$expresionCuentaSucursal, $dato);
-}
+    // Verificar si $fila ya es un array
+    if (is_array($fila)) {
+        // Convertir el array en una cadena de texto uniendo sus elementos con comas
+        $fila = implode(',', $fila);
+    }
 
-private function validarCBU($dato)
-{
-    // Realiza la validación para CBU aquí, devuelve true si es válido, false en caso contrario
-    return preg_match(Expressions::$expresionCBU, $dato);
-}
+    // Dividir la fila en elementos usando el punto y coma como separador
+    $datos = explode(';', $fila);
 
-private function validarCUIT($dato)
-{
-    // Realiza la validación para CUIT aquí, devuelve true si es válido, false en caso contrario
-    return preg_match(Expressions::$expresionCUIT, $dato);
-}
+    // Inicializar un array para almacenar las expresiones regulares y longitudes esperadas
+    $expresionesYLongitudes = [];
 
-private function validarImporte($dato)
-{
-    // Realiza la validación para Importe aquí, devuelve true si es válido, false en caso contrario
-    return preg_match('/-?\d+,\d{2}/', $dato);
-}
+    // Iterar sobre cada dato en la fila
+    foreach ($datos as $indice => $dato) {
+        $expresionRegular = null;
+        $longitudDato = strlen($dato);
 
-private function validarReferencia($dato)
-{
-    // Realiza la validación para Referencia aquí, devuelve true si es válido, false en caso contrario
-    return preg_match(Expressions::$expresionReferencia, $dato);
-}
+        // Intentar identificar el tipo de dato y generar una expresión regular en consecuencia
+        if (is_numeric($dato)) {
+            // Si es numérico, expresión regular para números con la longitud esperada
+            $expresionRegular = '/^\d{' . $longitudDato . '}$/';
+        } elseif (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $dato)) {
+            // Si parece una fecha en formato DD/MM/YYYY
+            $expresionRegular = '/^\d{2}\/\d{2}\/\d{4}$/';
+        } elseif (strpos($dato, '$') !== false) {
+            // Si contiene el símbolo de dólar ($), expresión regular para valores de moneda
+            $expresionRegular = '/^\$\d{1,3}(,\d{3})*(\.\d{2})?$/';
+        } elseif ($longitudDato > 0) {
+            // Si tiene una longitud mayor que 0, expresión regular para letras y caracteres especiales
+            $expresionRegular = '/^[A-Za-z0-9\s\.\-]{' . $longitudDato . '}$/';
+        }
 
-private function validarIdentificacionCliente($dato)
-{
-    // Realiza la validación para Referencia aquí, devuelve true si es válido, false en caso contrario
-    return preg_match(Expressions::$expresionIdentificacionCliente, $dato);
-}
+        // Agregar la expresión regular y la longitud al array
+        $expresionesYLongitudes[] = [
+            'expresionRegular' => $expresionRegular,
+            'longitud' => $longitudDato,
+        ];
+    }
 
-    public function closePopup()
-{
-    $this->popupMessage = '';
-    $this->mensajeError = '';
-    $this->mostrarMensajeErrorTipo1 = false;
-    $this->mostrarMensajeErrorTipo2 = false;
-    $this->mostrarMensajeErrorAltaProveedores = false;
+    // Actualizar el array $expresionesRegulares con las nuevas expresiones regulares y longitudes
+    $expresionesRegulares = $expresionesYLongitudes;
+
+    // Aquí puedes guardar $expresionesRegulares en una variable de sesión, en una base de datos, o donde prefieras
+    // para su posterior uso con archivos que sigan este formato
+
+    return $expresionesRegulares;
 }
      
     public function cargaArchivoTipo3()
@@ -597,20 +456,13 @@ private function validarIdentificacionCliente($dato)
 
                 // Calcular el total de importe y registros de cargaArchivoTipo2
                 foreach ($datosTipo2 as $dato) {
-                    if (array_key_exists('importe', $dato)) {
-                        // Eliminar caracteres no numéricos y convertir a número entero
-                        $importeEntero = intval(str_replace(['$', ',', '.'], '', $dato['importe']));
-                
-                        // Sumar el importe entero al total
-                        $totalImporteTipo2 += $importeEntero;
-                
-                        // Formatear $totalImporteTipo2 como cantidad de dinero si es necesario
-                        $totalImporteTipo2Formateado = number_format($totalImporteTipo2, 2, '.', '');
-                        $totalImporteTipo2Formateado = str_replace('.', '', $totalImporteTipo2Formateado); // Eliminar el punto
-                        $totalImporteTipo2Formateado = str_pad($totalImporteTipo2Formateado, 15, '0', STR_PAD_LEFT); // Rellenar con ceros
-                        $totalRegistrosTipo2 = str_pad($totalRegistrosTipo2, 7, '0', STR_PAD_LEFT);
-                        $totalRegistrosTipo2++;
-                    }
+                    $totalImporteTipo2 += $dato['importe'];
+                    // Formatear $totalImporteTipo2 como cantidad de dinero
+                    $totalImporteTipo2Formateado = number_format($totalImporteTipo2, 2, '.', '');
+                    $totalImporteTipo2Formateado = str_replace('.', '', $totalImporteTipo2Formateado); // Eliminar el punto
+                    $totalImporteTipo2Formateado = str_pad($totalImporteTipo2Formateado, 15, '0', STR_PAD_LEFT); // Rellenar con ceros
+                    $totalRegistrosTipo2 = str_pad($totalRegistrosTipo2, 7, '0', STR_PAD_LEFT);
+                    $totalRegistrosTipo2++;
                 }
 
                 $identificadorTipo2 = $this->identificadorTipo2;
@@ -635,16 +487,7 @@ private function validarIdentificacionCliente($dato)
 
                 $filler = str_repeat('0', 83);
 
-                // Buscar el índice de la fila existente en $datosProcesadosTipo3
-                $indiceFilaExistente = null;
-                foreach ($this->datosProcesadosTipo3 as $indice => $fila) {
-                    if ($fila['identificador_tipo2'] === $identificadorTipo2) {
-                        $indiceFilaExistente = $indice;
-                        break;
-                    }
-                }
-
-                if ($indiceFilaExistente !== null) {
+                    // Agregar los datos procesados al array
                     $this->datosProcesadosTipo3[] = [
                         'identificador_tipo2' => $identificadorTipo2,
                         'tipo_registro' => $tipoRegistro,
@@ -661,24 +504,6 @@ private function validarIdentificacionCliente($dato)
                         'importe_sellado_provincial'=> $ImporteSelladoProvincial,
                         'filler' => $filler,
                     ];
-                }else{
-                    $this->datosProcesadosTipo3[] = [
-                        'identificador_tipo2' => $identificadorTipo2,
-                        'tipo_registro' => $tipoRegistro,
-                        'total_importe' => $totalImporteTipo2Formateado,
-                        'total_registros' => $totalRegistrosTipo2,
-                        'importe_aceptados'=> $importeAceptados,
-                        'cantidad_registros_tipo2_aceptados'=> $cantidadRegistrosTipo2Aceptados,
-                        'importes_rechazados' => $importeRechazados,
-                        'cantidad_registros_tipo2_rechazados' => $cantidadRegistrosTipo2Rechazados,
-                        'importe_comision' => $importeComisiones,
-                        'importe_IVA' => $importeIVA,
-                        'importe_retencion_IVA' => $importeRetencionIVA,
-                        'importe_ingreso_bruto' => $importeIngresosBrutos,
-                        'importe_sellado_provincial'=> $ImporteSelladoProvincial,
-                        'filler' => $filler,
-                    ];
-                }
 
                       $this->ultimaFilaTipo3[] = [
                         'identificador_tipo2' => $identificadorTipo2,
@@ -701,95 +526,149 @@ private function validarIdentificacionCliente($dato)
     }
 
     public function descargarDatosAltaProveedores()
-{
-    // Verifica que la sección actual sea "alta_proveedor" y que haya datos antes de generar el archivo
-    if ($this->seccionSeleccionada === 'alta_proveedor' && count($this->datosAltaProveedor) > 0) {
-        // Verifica si todos los campos necesarios están presentes en al menos una fila
-        $camposNecesarios = ['cbu','id_tipo', 'tipo_cuenta', 'alias', 'cuit','titulares'];
-        $datosFaltantes = [];
-
-        foreach ($camposNecesarios as $campo) {
-            $campoEncontrado = false;
-
+    {
+        // Verifica que la sección actual sea "alta_proveedor" y que haya datos antes de generar el archivo
+        if ($this->seccionSeleccionada === 'alta_proveedor' && count($this->datosAltaProveedor) > 0) {
+            // Genera el contenido del archivo TXT
+            $contenido = '';
             foreach ($this->datosAltaProveedor as $fila) {
-                if (isset($fila[$campo]) && !empty($fila[$campo])) {
-                    $campoEncontrado = true;
-                    break;
-                }
+                // Formatea los campos según las longitudes
+                $contenido .=
+                    str_pad($fila['cbu'], 22, '0', STR_PAD_LEFT) .
+                    str_pad($fila['alias'], 22) .
+                    $fila['id_tipo'] .
+                    str_pad($fila['clave_cuenta'], 11, '0', STR_PAD_LEFT) .
+                    $fila['tipo_cuenta'] .
+                    str_pad($fila['referencia_cuenta'], 30) .
+                    str_pad($fila['email'], 50) .
+                    $fila['titulares'] . "\n";
             }
 
-            if (!$campoEncontrado) {
-                $datosFaltantes[] = $campo;
+            // Agregar el relleno de 134 espacios en blanco
+            $contenido .= str_repeat(' ', 134);
+
+            // Agregar la cantidad de registros con longitud fija de 5
+            $contenido .= str_pad(count($this->datosAltaProveedor), 5, '0', STR_PAD_LEFT);
+
+            // Define el nombre del archivo
+            $nombreArchivo = 'datos_alta_proveedores.txt';
+
+            // Crea el archivo en el almacenamiento temporal
+            file_put_contents($nombreArchivo, $contenido);
+
+            // Proporciona una respuesta para descargar el archivo
+            return response()->stream(
+                function () use ($nombreArchivo) {
+                    readfile($nombreArchivo);
+                },
+                200,
+                [
+                    'Content-Type' => 'text/plain',
+                    'Content-Disposition' => 'attachment; filename=' . $nombreArchivo,
+                ]
+            );
+        }
+    }
+    
+    public function descargarDatosRegistroTipo1()
+    {
+        // Verifica que la sección actual sea "regitro_tipo1" y que haya datos antes de generar el archivo
+        if ($this->seccionSeleccionada === 'registro_tipo_1' && count($this->datosProcesadosTipo1) > 0) {
+            // Genera el contenido del archivo TXT
+            $contenido = '';
+            foreach ($this->datosProcesadosTipo1 as $fila) {
+                // Formatea los campos según las longitudes
+                $contenido .=
+                    $fila['tipo_registro'] .
+                    $fila['cuit_empresa'] .
+                    $fila['codigo_sucursal'] .
+                    $fila['cbu_deseado'] .
+                    $fila['moneda'] .
+                    $fila['fecha_pago'] .
+                    $fila['info_criterio_empresa'] .
+                    $fila['tipo_pago'] .
+                    $fila['clase_pagos'] .
+                    $fila['codigo_convenio'] .
+                    $fila['numero_envio'] .
+                    $fila['sistema_original'] .
+                    $fila['filler'] .
+                    $fila['casa_envio_rendicion'] .
+                    $fila['filler2'] . "\n";
             }
-        }
+            // Define el nombre del archivo
+            $nombreArchivo = 'datos_registro_tipo_1.txt';
 
-        if (!empty($datosFaltantes)) {
-            // Al menos un campo necesario está faltante
-            $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo! Los siguientes campos son obligatorios: ' . implode(', ', $datosFaltantes);
-            $this->mostrarMensajeError = true;
-            $this->mostrarMensajeErrorAltaProveedores = true;
-            $this->intentoDescarga = true;
-            return;
-        }
+            // Crea el archivo en el almacenamiento temporal
+            file_put_contents($nombreArchivo, $contenido);
 
+            // Proporciona una respuesta para descargar el archivo
+            return response()->stream(
+                function () use ($nombreArchivo) {
+                    readfile($nombreArchivo);
+                },
+                200,
+                [
+                    'Content-Type' => 'text/plain',
+                    'Content-Disposition' => 'attachment; filename=' . $nombreArchivo,
+                ]
+            );
+        }
+    }
+
+    public function descargarDatosRegistroTipo2()
+{
+    // Verifica que haya datos cargados en datosCargadosTipo2
+    if (count($this->datosCargadosTipo2) > 0) {
         // Genera el contenido del archivo TXT
         $contenido = '';
-        foreach ($this->datosAltaProveedor as $fila) {
-            if(isset($fila['cbu'])){
-                $cbu = str_pad($fila['cbu'], 22, '0', STR_PAD_LEFT);
-            }else{
-                $this->datosNoEncontrados();
-            }
+        $tipoRegistro = '2';
 
-            if(isset($fila['cuit'])){
-                $cuit = str_pad($fila['cuit'], 11, '0', STR_PAD_LEFT);
-            }else{
-                $this->datosNoEncontrados();
+        foreach ($this->datosCargadosTipo2 as $fila) {
+            /* if (!empty($fila['tipo_registro'])) {
+                $tipoRegistro = $fila['tipo_registro'];
             }
-    
-            if(isset($fila['alias'])){
-                $alias = str_pad($fila['alias'], 22);
-            }else{
-                $this->datosNoEncontrados();
+            if (!empty($fila['entidad_acreditar'])) {
+                $entidad = str_pad($fila['entidad_acreditar'], 4, '0', STR_PAD_LEFT);
             }
-           
-            if(isset($fila['id_tipo'])){
-                $idTipo = $fila['id_tipo'];
-            }else{
-                $this->datosNoEncontrados();
-            }
-    
-            if(isset($fila['tipo_cuenta'])){
-               $tipoCuenta = $fila['tipo_cuenta'];     
-            }else{
-                $this->datosNoEncontrados();
-            }
-    
-            if(isset($fila['titulares'])){
-                $titulares = $fila['titulares'];
-            }else{
-                $this->datosNoEncontrados();
-            }
-            // Formatea los campos según las longitudes
+            if (!empty($fila['sucursal_acreditar'])) {
+                $sucursal = str_pad($fila['sucursal_acreditar'], 4, '0', STR_PAD_LEFT);
+            } */
+            // Elimina los caracteres "$" y ","
+            $formatoDinero = $fila['importe_formateado'];  
+            $formatoDinero = str_replace(['$', ','], '', $formatoDinero);
+
+            // Convierte la cadena a un número entero
+            $numeroEntero = intval($formatoDinero);
+            $fila['importe'] = $numeroEntero;
+
+            // Formatea los campos según las longitudes y concatena sin espacios
             $contenido .=
-                $cbu .
-                $cuit .
-                $alias .
-                $idTipo .
-                $tipoCuenta .
-                str_pad($fila['referencia'], 30) .
-                str_pad($fila['email'], 50) .
-                $titulares . "\n";
+                $fila['tipo_registro'] .
+                $fila['entidad_acreditar'].
+                $fila['sucursal_acreditar'].
+                $fila['ultimo_numero_primer_bloque'].
+                $fila['numero_segundo_bloque'].
+                $fila['clase_documento'] .
+                $fila['importe_formateado'] .
+                $fila['clase_documento'] .
+                $fila['tipo_documento_beneficiario'] .
+                $fila['importe'] .
+                $fila['referencia'] .
+                $fila['identificacion_cliente'] .
+                $fila['cuil'] .
+                $fila['cuil_con_ceros'] .
+                $fila['uso_bna'] .
+                $fila['datos_empresa'] .
+                $fila['identificador_prestamo'] .
+                $fila['nro_operacion_link'] . 
+                $fila['sucursal_acreditar'] . 
+                $fila['nro_registro'] . 
+                $fila['observaciones'] . 
+                $fila['filler'] . "\n";
         }
 
-        // Agregar el relleno de 134 espacios en blanco
-        $contenido .= str_repeat(' ', 134);
-
-        // Agregar la cantidad de registros con longitud fija de 5
-        $contenido .= str_pad(count($this->datosAltaProveedor), 5, '0', STR_PAD_LEFT);
-
         // Define el nombre del archivo
-        $nombreArchivo = 'datos_alta_proveedores.txt';
+        $nombreArchivo = 'datos_registro_tipo_2.txt';
 
         // Crea el archivo en el almacenamiento temporal
         file_put_contents($nombreArchivo, $contenido);
@@ -808,460 +687,46 @@ private function validarIdentificacionCliente($dato)
     }
 }
 
-public function datosNoEncontrados(){
-    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo! Los siguientes campos son obligatorios: ';
-    $this->mostrarMensajeError = true;
-    $this->mostrarMensajeErrorAltaProveedores = true;
-    $this->intentoDescarga = true;
-    return;
-}
-    
-    public function descargarDatosRegistroTipo1()
+    public function descargarDatosRegistroTipo3()
     {
-        // Verifica que la sección actual sea "registro_tipo_1" y que haya datos antes de generar el archivo
-        if ($this->seccionSeleccionada === 'registro_tipo_1' && count($this->datosProcesadosTipo1) > 0) {
-            // Verifica que todos los campos necesarios estén presentes en al menos una fila
-            $camposNecesarios = [
-                'cuit',
-                'entidad_acreditar',
-                'cbu',
-                'moneda',
-                'fecha_pago',
-                'info_criterio_empresa',
-                'clase_pagos',
-                'codigo_convenio',
-                'numero_envio',
-            ];
-    
-            $datosFaltantes = [];
-    
-            foreach ($camposNecesarios as $campo) {
-                $campoEncontrado = false;
-    
-                foreach ($this->datosProcesadosTipo1 as $fila) {
-                    if (isset($fila[$campo])) {
-                        $campoEncontrado = true;
-                        break;
-                    }
-                }
-    
-                if (!$campoEncontrado) {
-                    $datosFaltantes[] = $campo;
-                }
-            }
-
-            if (!empty($datosFaltantes)) {
-                // Al menos un campo necesario está faltante
-                $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                $this->mostrarMensajeError = true;
-                $this->mostrarMensajeErrorTipo1 = true;
-                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
-    
-                // Establece el intento de descarga
-                $this->intentoDescarga = true;
-    
-                // Retorna para no continuar con la descarga
-                return;
-            }
-    
-            // Genera el contenido del archivo TXT
-            $contenido = '';
-            foreach ($this->datosProcesadosTipo1 as $fila) {
-                if(isset($fila['entidad_acreditar'])){
-                   $cuentaSuc = $fila['entidad_acreditar']; 
-                }else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                $this->mostrarMensajeError = true;
-                $this->mostrarMensajeErrorTipo1 = true;
-                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
-    
-                // Establece el intento de descarga
-                $this->intentoDescarga = true;
-    
-                // Retorna para no continuar con la descarga
-                return;
-                }
-                // Verificar si la cadena tiene 3 caracteres numéricos
-                if (strlen($cuentaSuc) === 3 && is_numeric($cuentaSuc)) {
-                    // Agregar ceros a la izquierda para que la longitud sea 4
-                    $cuentaSuc = str_pad($cuentaSuc, 4, '0', STR_PAD_LEFT);
-                }else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                $this->mostrarMensajeError = true;
-                $this->mostrarMensajeErrorTipo1 = true;
-                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
-    
-                // Establece el intento de descarga
-                $this->intentoDescarga = true;
-    
-                // Retorna para no continuar con la descarga
-                return;
-                }
-
-                if(isset($fila['cbu'])){
-                $cbu = $fila['cbu'];
-                $primerBloque = substr($cbu, 0, 8);
-
-                // Obtener los siguientes 14 dígitos
-                $segundoBloque = substr($cbu, 8, 14);
-                }else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                $this->mostrarMensajeError = true;
-                $this->mostrarMensajeErrorTipo1 = true;
-                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
-    
-                // Establece el intento de descarga
-                $this->intentoDescarga = true;
-    
-                // Retorna para no continuar con la descarga
-                return;
-                }
-
-                if(isset($fila['fecha_pago'])){
-                   $fechaPago = $fila['fecha_pago'];
-                   $fechaSinBarras = str_replace('/', '', $fechaPago);
-   
-                   // Utiliza DateTime para convertir la fecha
-                   $fecha = DateTime::createFromFormat('dmY', $fechaSinBarras);
-   
-                   // Formatea la fecha como deseas
-                   $fechaFormateada = $fecha->format('Ymd');
-                }else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                $this->mostrarMensajeError = true;
-                $this->mostrarMensajeErrorTipo1 = true;
-                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
-    
-                // Establece el intento de descarga
-                $this->intentoDescarga = true;
-    
-                // Retorna para no continuar con la descarga
-                return;
-                }
-               
-                if(isset($fila['codigo_convenio'])){
-                    $codConvenio = $fila['codigo_convenio'];
-                    $longitudActual = strlen($codConvenio);
-    
-                    // Define la longitud objetivo (10 caracteres en total)
-                    $longitudObjetivo = 10;
-    
-                    // Calcula cuántos ceros agregar a la izquierda y a la derecha
-                    if ($longitudActual == 4) {
-                        // Si tiene 4 dígitos, agrega 2 ceros a la izquierda y 4 a la derecha
-                        $cerosAIzquierda = 2;
-                        $cerosADerecha = 4;
-                    } elseif ($longitudActual == 8) {
-                        // Si tiene 8 dígitos, agrega 2 ceros a la izquierda y ninguno a la derecha
-                        $cerosAIzquierda = 2;
-                        $cerosADerecha = 0;
-                    }
-                    // Verifica la longitud actual del número (4 caracteres)
-    
-                    // Agrega los ceros necesarios a la izquierda y a la derecha
-                    $codConvenioFormateado = str_repeat('0', $cerosAIzquierda) . $codConvenio . str_repeat('0', $cerosADerecha);
-                }else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                $this->mostrarMensajeError = true;
-                $this->mostrarMensajeErrorTipo1 = true;
-                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
-    
-                // Establece el intento de descarga
-                $this->intentoDescarga = true;
-    
-                // Retorna para no continuar con la descarga
-                return;
-                }
-            
-                if(isset($fila['numero_envio'])){
-                    $numeroEnvio = $fila['numero_envio'];
-                    $numeroEnvioFormateado = str_pad($numeroEnvio, 6, '0', STR_PAD_LEFT);
-                }else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                $this->mostrarMensajeError = true;
-                $this->mostrarMensajeErrorTipo1 = true;
-                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
-    
-                // Establece el intento de descarga
-                $this->intentoDescarga = true;
-    
-                // Retorna para no continuar con la descarga
-                return;
-                }
-
-                // Formatea los campos según las longitudes
-                $contenido .=
-                    $fila['tipo_registro'] .
-                    $fila['cuit'] .
-                    $cuentaSuc .
-                    $segundoBloque .
-                    $fila['moneda'] .
-                    $fechaFormateada .
-                    $fila['info_criterio_empresa'] .
-                    $fila['tipo_pagos'] .
-                    $fila['clase_pagos'] .
-                    $codConvenioFormateado .
-                    $numeroEnvioFormateado .
-                    $fila['sistema_original'] .
-                    $fila['filler'] .
-                    $fila['casa_envio_rendicion'] .
-                    $fila['filler_100'] . "\n";
-            }
-    
-            // Define el nombre del archivo
-            $nombreArchivo = 'datos_registro_tipo_1.txt';
-    
-            // Crea el archivo en el almacenamiento temporal
-            file_put_contents($nombreArchivo, $contenido);
-    
-            // Proporciona una respuesta para descargar el archivo
-            return response()->stream(
-                function () use ($nombreArchivo) {
-                    readfile($nombreArchivo);
-                },
-                200,
-                [
-                    'Content-Type' => 'text/plain',
-                    'Content-Disposition' => 'attachment; filename=' . $nombreArchivo,
-                ]
-            );
-        }
-    }
-    
-    public function descargarDatosRegistroTipo2()
-    {
-        // Restablece la variable $intentoDescarga
-        $this->intentoDescarga = false;
-    
-        // Verifica que haya datos cargados en datosProcesadosTipo2
-        if (count($this->datosProcesadosTipo2) > 0) {
-            // Verifica que todos los campos necesarios estén presentes en al menos una fila
-            $camposNecesarios = ['tipo_registro', 'entidad_acreditar', 'sucursal', 'cbu','cuit', 'importe','identificacion_cliente', 'nro_documento','sucursal_acreditar'];
-    
-            $datosFaltantes = [];
-    
-            foreach ($camposNecesarios as $campo) {
-                $campoEncontrado = false;
-    
-                foreach ($this->datosProcesadosTipo2 as $fila) {
-                    if (isset($fila[$campo])) {
-                        $campoEncontrado = true;
-                        break;
-                    }
-                }
-    
-                if (!$campoEncontrado) {
-                    $datosFaltantes[] = $campo;
-                }
-            }
-
-            if (!empty($datosFaltantes)) {
-                // Al menos un campo necesario está faltante
-                $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                $this->mostrarMensajeError = true;
-                $this->mostrarMensajeErrorTipo2 = true;
-    
-                // Establece el intento de descarga
-                $this->intentoDescarga = true;
-    
-                // Retorna para no continuar con la descarga
-                return;
-            }
-    
-            // Genera el contenido del archivo TXT
-            $contenido = '';
-            $tipoRegistro = '2';
-    
-            foreach ($this->datosProcesadosTipo2 as $fila) {
-                if(isset($fila['entidad_acreditar'])){
-                    $entidadAcreditar = $fila['entidad_acreditar'];
-                    $entidad = str_pad($entidadAcreditar, 4, '0', STR_PAD_LEFT);
-                }else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                $this->mostrarMensajeError = true;
-                $this->mostrarMensajeErrorTipo2 = true;
-    
-                // Establece el intento de descarga
-                $this->intentoDescarga = true;
-    
-                // Retorna para no continuar con la descarga
-                return;
-                }
-
-                if(isset($fila['sucursal_acreditar'])){
-                    $sucursalAcreditar = $fila['sucursal_acreditar'];
-                    $sucursal = str_pad($sucursalAcreditar, 4, '0', STR_PAD_LEFT);
-                }else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                    $this->mostrarMensajeError = true;
-                    $this->mostrarMensajeErrorTipo2 = true;
-        
-                    // Establece el intento de descarga
-                    $this->intentoDescarga = true;
-        
-                    // Retorna para no continuar con la descarga
-                    return;
-                }
-
-                if(isset($fila['cbu'])){
-                    $cbu = $fila['cbu'];
-                    // Obtener los primeros 8 dígitos
-                    $primerBloque = substr($cbu, 0, 8);
-    
-                    // Obtener el último dígito del primer bloque
-                    $ultimoDigito = substr($primerBloque, -1);
-    
-                    // Obtener los siguientes 14 dígitos
-                    $segundoBloque = substr($cbu, 8, 14);
-                }else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                    $this->mostrarMensajeError = true;
-                    $this->mostrarMensajeErrorTipo2 = true;
-        
-                    // Establece el intento de descarga
-                    $this->intentoDescarga = true;
-        
-                    // Retorna para no continuar con la descarga
-                    return;
-                }
-
-                if(isset($fila['importe'])){
-                    $formatoDinero = $fila['importe'];
-                    $formatoDinero = str_replace(['$', ','], '', $formatoDinero);
-                    // Convierte la cadena a un número entero
-                    $numeroEntero = intval($formatoDinero);
-                    $numeroAjustado = str_pad((string)$numeroEntero, 10, '0', STR_PAD_LEFT);
-                }else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                    $this->mostrarMensajeError = true;
-                    $this->mostrarMensajeErrorTipo2 = true;
-        
-                    // Establece el intento de descarga
-                    $this->intentoDescarga = true;
-        
-                    // Retorna para no continuar con la descarga
-                    return;
-                }
-
-                if(isset($fila['identificacion_cliente'])){
-                    $identificacionCliente = str_pad($fila['identificacion_cliente'], 1, '0', STR_PAD_RIGHT); // Asegura una longitud de 1
-                }else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                    $this->mostrarMensajeError = true;
-                    $this->mostrarMensajeErrorTipo2 = true;
-        
-                    // Establece el intento de descarga
-                    $this->intentoDescarga = true;
-        
-                    // Retorna para no continuar con la descarga
-                    return;
-                }
-
-                if(isset($fila['cuit'])){
-                    $nroDocumento = str_pad($fila['cuit'], 11, '0', STR_PAD_RIGHT); // Asegura una longitud de 11
-                }else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                    $this->mostrarMensajeError = true;
-                    $this->mostrarMensajeErrorTipo2 = true;
-        
-                    // Establece el intento de descarga
-                    $this->intentoDescarga = true;
-        
-                    // Retorna para no continuar con la descarga
-                    return;
-                }
-
-                if(isset($identificacionCliente)&& isset($nroDocumento)){
-                    $identificacionNroDocumento = $identificacionCliente . $nroDocumento;
-                    // Asegura que la longitud sea de 22 caracteres
-                    $identificacionNroDocumento = str_pad($identificacionNroDocumento, 22, ' ', STR_PAD_RIGHT);
-                }
-
-                // Formatea los campos según las longitudes y concatena sin espacios
-                $contenido .=
-                    $fila['tipo_registro'] .
-                    $entidad .
-                    $sucursal .
-                    $ultimoDigito .
-                    $segundoBloque .
-                    $numeroAjustado .
-                    $fila['referencia'] .
-                    $identificacionNroDocumento .
-                    $fila['cuil_con_ceros'] .
-                    $fila['uso_BNA'] .
-                    $fila['datos_de_la_empresa'] .
-                    $fila['identificador_prestamo'] .
-                    $fila['nro_operacion_link'] .
-                    $fila['sucursal'] .
-                    $fila['numero_registro_link'] .
-                    $fila['observaciones'] .
-                    $fila['filler'] . "\n";
-            }
-    
-            // Define el nombre del archivo
-            $nombreArchivo = 'datos_registro_tipo_2.txt';
-    
-            // Crea el archivo en el almacenamiento temporal
-            file_put_contents($nombreArchivo, $contenido);
-    
-            // Proporciona una respuesta para descargar el archivo
-            return response()->stream(
-                function () use ($nombreArchivo) {
-                    readfile($nombreArchivo);
-                },
-                200,
-                [
-                    'Content-Type' => 'text/plain',
-                    'Content-Disposition' => 'attachment; filename=' . $nombreArchivo,
-                ]
-            );
-        }
-    }
-    
-
-public function descargarDatosRegistroTipo3()
-{
-    // Verifica que la sección actual sea "registro_tipo_3" y que haya datos antes de generar el archivo
-    if ($this->seccionSeleccionada === 'registro_tipo_3' && !empty($this->ultimaFilaTipo3)) {
-        // Obtiene la última fila de datos
-        $ultimaFila = end($this->ultimaFilaTipo3);
-
-        // Formatea los campos de la última fila
+        // Verifica que la sección actual sea "regitro_tipo1" y que haya datos antes de generar el archivo
+        if ($this->seccionSeleccionada === 'registro_tipo_3' && !empty($this->ultimaFilaTipo3)) {
+            // Formatea los campos de la última fila
         $ultimaFilaFormateada = sprintf(
-            $ultimaFila['tipo_registro'] .
-            $ultimaFila['total_importe'] .
-            $ultimaFila['total_registros'] .
-            $ultimaFila['importe_aceptados'] .
-            $ultimaFila['cantidad_registros_tipo2_aceptados'] .
-            $ultimaFila['importes_rechazados'] .
-            $ultimaFila['cantidad_registros_tipo2_rechazados'] .
-            $ultimaFila['importe_comision'] .
-            $ultimaFila['importe_IVA'] .
-            $ultimaFila['importe_retencion_IVA'] .
-            $ultimaFila['importe_ingreso_bruto'] .
-            $ultimaFila['importe_sellado_provincial'] .
-            $ultimaFila['filler']
+            $this->ultimaFilaTipo3['tipo_registro'].
+            $this->ultimaFilaTipo3['total_importe'].
+            $this->ultimaFilaTipo3['total_registros'].
+           $this->ultimaFilaTipo3['importe_aceptados'].
+           $this->ultimaFilaTipo3['cantidad_registros_tipo2_aceptados'].
+           $this->ultimaFilaTipo3['importes_rechazados'].
+           $this->ultimaFilaTipo3['cantidad_registros_tipo2_rechazados'].
+           $this->ultimaFilaTipo3['importe_comision']. 
+           $this->ultimaFilaTipo3['importe_IVA'].            
+           $this->ultimaFilaTipo3['importe_retencion_IVA']. 
+           $this->ultimaFilaTipo3['importe_ingreso_bruto'].
+           $this->ultimaFilaTipo3['importe_sellado_provincial'].
+           $this->ultimaFilaTipo3['filler']
         );
 
-        // Define el nombre del archivo
-        $nombreArchivo = 'datos_registro_tipo_3.txt';
+            // Define el nombre del archivo
+            $nombreArchivo = 'datos_registro_tipo_3.txt';
 
-        // Crea el archivo en el almacenamiento temporal
-        file_put_contents($nombreArchivo, $ultimaFilaFormateada);
+            // Crea el archivo en el almacenamiento temporal
+            file_put_contents($nombreArchivo, $ultimaFilaFormateada);
 
-        // Proporciona una respuesta para descargar el archivo
-        return response()->stream(
-            function () use ($nombreArchivo) {
-                readfile($nombreArchivo);
-            },
-            200,
-            [
-                'Content-Type' => 'text/plain',
-                'Content-Disposition' => 'attachment; filename=' . $nombreArchivo,
-            ]
-        );
+            // Proporciona una respuesta para descargar el archivo
+            return response()->stream(
+                function () use ($nombreArchivo) {
+                    readfile($nombreArchivo);
+                },
+                200,
+                [
+                    'Content-Type' => 'text/plain',
+                    'Content-Disposition' => 'attachment; filename=' . $nombreArchivo,
+                ]
+            );
+        }
     }
-}
 
     public function cambiarSeccion($nuevaSeccion)
     {
@@ -1343,43 +808,50 @@ public function eliminarUltimoArchivoTipo1()
 
 public function eliminarUltimosDatosTipo2()
 {
-    // Busca el último archivo de "Registros Tipo 2" en la lista de registrosArchivos
-    $ultimoIndice = $this->findLastIndexByTipoRegistro('Registros tipo 2'); // Asegúrate de pasar 'Registros tipo 2'
+   // Busca el último archivo de "Registros Tipo 2" en la lista de registrosArchivos
+   $ultimoIndice = $this->findLastIndexByTipoRegistro('Registros tipo 2'); // Asegúrate de pasar 'Registros tipo 2'
 
-    // Verifica si se encontró el último archivo
-    if ($ultimoIndice !== null) {
-        // Obtiene el identificador único del último archivo de "Registros Tipo 2"
-        $identificadorTipo2 = $this->registrosArchivos[$ultimoIndice]['identificador_tipo2'];
+   // Verifica si se encontró el último archivo
+   if ($ultimoIndice !== null) {
+       // Obtiene el identificador único del último archivo de "Registros Tipo 2"
+       $identificadorTipo2 = $this->registrosArchivos[$ultimoIndice]['identificador_tipo2'];
 
-        // Elimina los datos tipo 3 relacionados con el último archivo de "Registros Tipo 2"
-        foreach ($this->datosProcesadosTipo3 as $index => $registroTipo3) {
-            if ($registroTipo3['identificador_tipo2'] === $identificadorTipo2) {
-                unset($this->datosProcesadosTipo3[$index]);
-            }
-        }
+       // Recorre los datos de datosProcesadosTipo2 y elimina los que coincidan con el identificadorTipo2
+       foreach ($this->datosProcesadosTipo2 as $index => $registro) {
+           if ($registro['identificador_tipo2'] === $identificadorTipo2) {
+               unset($this->datosProcesadosTipo2[$index]);
+           }
+       }
 
-        // Recorre los datos de datosProcesadosTipo2 y elimina los que coincidan con el identificadorTipo2
-        foreach ($this->datosProcesadosTipo2 as $index => $registro) {
-            if ($registro['identificador_tipo2'] === $identificadorTipo2) {
-                unset($this->datosProcesadosTipo2[$index]);
-            }
-        }
+       // Reindexa los elementos
+       $this->datosProcesadosTipo2 = array_values($this->datosProcesadosTipo2);
 
-        // Reindexa los elementos después de eliminar
-        $this->datosProcesadosTipo2 = array_values($this->datosProcesadosTipo2);
+       // Elimina el último archivo de "Registros Tipo 2" de la lista de registrosArchivos
+       unset($this->registrosArchivos[$ultimoIndice]);
 
-        // Elimina el último archivo de "Registros Tipo 2" de la lista de registrosArchivos
-        unset($this->registrosArchivos[$ultimoIndice]);
+       // Reindexa los elementos
+       $this->registrosArchivos = array_values($this->registrosArchivos);
 
-        // Reindexa los elementos después de eliminar
-        $this->registrosArchivos = array_values($this->registrosArchivos);
+       // Elimina los datos tipo 3 procesados relacionados con el último archivo de "Registros Tipo 2"
+       $this->registrosArchivos = array_filter($this->registrosArchivos, function ($archivo) use ($identificadorTipo2) {
+           return $archivo['identificador_tipo2'] !== $identificadorTipo2;
+       });
 
-        // Realiza cualquier otra lógica necesaria después de eliminar los registros
+       // También elimina los datos tipo 3 procesados relacionados con el último archivo de "Registros Tipo 2"
+       foreach ($this->datosProcesadosTipo3 as $index => $registroTipo3) {
+           if ($registroTipo3['identificador_tipo2'] === $identificadorTipo2) {
+               unset($this->datosProcesadosTipo3[$index]);
+           }
+       }
 
-        // Puedes agregar un mensaje de éxito o redireccionar según tus necesidades
-    }
+       // Reindexa los elementos
+       $this->datosProcesadosTipo3 = array_values($this->datosProcesadosTipo3);
+
+       // Realiza cualquier otra lógica necesaria después de eliminar los registros
+
+       // Puedes agregar un mensaje de éxito o redireccionar según tus necesidades
+   }
 }
-
 
 private function eliminarDatosTipo2YTipo3PorIdentificador($identificadorUnico)
 {
