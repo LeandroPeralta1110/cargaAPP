@@ -1,4 +1,7 @@
-<div class="flex items-center justify-center bg-cover bg-center bg-fixed imagenfondo">
+@include('layouts.app')
+
+@section('content')
+<div>
     @if($registrosArchivos)
     <div class="ml-2 w-2/12 p-4 bg-gray-200 rounded-2xl" style="position: absolute; left: 0; top: 35%; height: 300px;">
         <div class="bg-gray-200 px-4 py-3 rounded-md">
@@ -21,22 +24,6 @@
     @endif 
 
     <div class="w-full max-w-screen-lg p-6">
-        <div class="flex mb-10 mt-5">
-            <!-- Botón para la sección "Alta Proveedores" -->
-            <button wire:click="cambiarSeccion('alta_proveedor')"
-                class="bg-blue-500 hover:bg-blue-600 text-white custom-btn px-4 py-2 rounded-md mr-2">Alta
-                Proveedores
-            </button>
-            <button wire:click="cambiarSeccion('registro_tipo_1')"
-                class="bg-blue-500 hover:bg-blue-600 text-white custom-btn px-4 py-2 rounded-md mr-2">Registros tipo 1
-            </button>
-            <button wire:click="cambiarSeccion('registro_tipo_2')"
-                class="bg-blue-500 hover:bg-blue-600 text-white custom-btn px-4 py-2 rounded-md mr-2">Registros tipo 2
-            </button>
-            <button wire:click="cambiarSeccion('registro_tipo_3')"
-                class="bg-blue-500 hover:bg-blue-600 text-white custom-btn px-4 py-2 rounded-md mr-2">Registros tipo 3
-            </button>
-
             {{-- <!-- Botón para la sección "Archivo de Pago" -->
             <div class="items-center ">
                 <div class="mb-4">
@@ -49,7 +36,7 @@
                     </select>
                 </div>
             </div> --}}
-        </div>
+      
 
         
 
@@ -738,3 +725,4 @@
         @endif
     </div>
 </div>
+@endsection

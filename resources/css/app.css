@@ -22,3 +22,7 @@ html {
     background-image: url("../../public/images/vortex-image.jpg");
     min-height: 666px;
 }
+
+.bg-gradient {
+    background: linear-gradient(to bottom, #FFFFFF, #5A67D8);
+}
