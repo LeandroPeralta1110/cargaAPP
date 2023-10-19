@@ -22,17 +22,13 @@
     </head>
     <body class="font-sans antialiased">
         <x-banner />
-        <div class="flex flex-col">
-            <!-- Encabezado -->
-            @include('header')
-        
-            <div class="flex">
-                @livewire('navigation-menu')
-                <!-- Contenido -->
-                <main>
-                    @yield('content')
-                </main>
-            </div>
+        <div class=" bg-gray-100">
+            @livewire('navigation-menu')
+            
+            <!-- Page Content -->
+            <main >
+                {{ $slot }}
+            </main>
         </div>
         
         <div id="footer" class="hidden bg-gray-200 text-center py-2">

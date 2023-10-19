@@ -36,10 +36,104 @@
                     <br>
                 </h3>  
                 <hr class="my-4 border-t-2 border-blue-500">
-            @endforeach
+                @endforeach
+            </div>
         </div>
-    </div>
-    @endif 
+        @endif 
+        
+        @if (!empty($popupMessage) && ($datosFaltantesTipo1 || $datosFaltantesTipo2 || $datosNoEncontradosAltaProveedor))
+        <div class="popup-container">
+            <div class="alert alert-danger popup">
+                <button class="close-popup-button" wire:click="closePopup">Cerrar</button>
+                <h4>Datos no encontrados:</h4>
+                <ul>
+                    @if ($seccionSeleccionada === 'registro_tipo_1' && $datosFaltantesTipo1)
+                        <li>Tipo 1:</li>
+                        <ul>
+                            @foreach ($datosFaltantesTipo1 as $linea => $camposFaltantes)
+                                <li>Línea {{ $linea }}:
+                                    @foreach ($camposFaltantes as $campoFaltante)
+                                        {{ $campoFaltante }},
+                                    @endforeach
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+    
+                    @if ($seccionSeleccionada === 'registro_tipo_2' && $datosFaltantesTipo2)
+                        <li>Tipo 2:</li>
+                        <ul>
+                            @foreach ($datosFaltantesTipo2 as $linea => $camposFaltantes)
+                                <li>Línea {{ $linea }}:
+                                    @foreach ($camposFaltantes as $campoFaltante)
+                                        {{ $campoFaltante }},
+                                    @endforeach
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+    
+                    @if ($seccionSeleccionada === 'alta_proveedor' && $datosNoEncontradosAltaProveedor)
+                        <li>Alta Proveedores:</li>
+                        <ul>
+                            @foreach ($datosNoEncontradosAltaProveedor as $linea => $camposFaltantes)
+                                <li>Línea {{ $linea }}:
+                                    @foreach ($camposFaltantes as $campoFaltante)
+                                        {{ $campoFaltante }},
+                                    @endforeach
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </ul>
+            </div>
+        </div>
+    @endif
+    
+    
+        @if (!empty($mensajeError))
+        @if ($mostrarMensajeError)
+        <div class="popup-container">
+            <div class="alert alert-danger popup">
+                <button class="close-popup-button" wire:click="closePopup">Cerrar</button>
+                <h4>Datos no encontrados:</h4>
+                <ul>
+                    @if($mostrarMensajeErrorTipo1)
+                        @foreach ($mostrarDatosFaltantesTipo1 as $linea => $datosFaltantes)
+                            <li>Línea {{ $linea }}:
+                                @foreach ($datosFaltantes as $datoFaltante)
+                                    {{ $datoFaltante }},
+                                @endforeach
+                            </li>
+                        @endforeach
+                    @endif
+                    @if($mostrarMensajeErrorTipo2)
+                        @foreach ($datosFaltantesTipo2 as $linea => $datosFaltantes)
+                            <li>Línea {{ $linea }}:
+                                @foreach ($datosFaltantes as $datoFaltante)
+                                    {{ $datoFaltante }},
+                                @endforeach
+                            </li>
+                        @endforeach
+                    @endif
+                    @if($mostrarMensajeErrorAltaProveedores)
+                    @foreach ($datosNoEncontradosAltaProveedor as $linea => $datosFaltantes)
+                        <li>Línea {{ $linea }}:
+                            @foreach ($datosFaltantes as $datoFaltante)
+                                {{ $datoFaltante }},
+                            @endforeach
+                        </li>
+                    @endforeach
+                @endif
+                </ul>
+            </div>
+        </div>
+        @php
+            // Restablece el intento de descarga para mostrar el mensaje nuevamente en futuros intentos
+            $intentoDescarga = false;
+        @endphp
+    @endif
+    @endif
 
     <div class="w-full max-w-screen-lg p-6">
             
@@ -163,22 +257,6 @@
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
                                                 NUMERO DE ENVIO
                                             </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                SISTEMA ORIGINAL
-                                            </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                FILLER
-                                            </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                CASA ENVIO RENDICION
-                                            </th>
-                                            <th
-                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                FILLER
-                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white">
@@ -189,46 +267,34 @@
                                                         {{ $fila['tipo_registro'] }}
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['cuit_empresa'] }}
+                                                        <?php echo isset($fila['cuit']) ? $fila['cuit'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['codigo_sucursal'] }}
+                                                        <?php echo isset($fila['entidad_acreditar']) ? $fila['entidad_acreditar'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['cbu_deseado'] }}
+                                                        <?php echo isset($fila['cbu']) ? $fila['cbu'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['moneda'] }}
+                                                        <?php echo isset($fila['moneda']) ? $fila['moneda'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['fecha_pago'] }}
+                                                        <?php echo isset($fila['fecha_pago']) ? $fila['fecha_pago'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['info_criterio_empresa'] }}
+                                                        <?php echo isset($fila['info_criterio_empresa']) ? $fila['info_criterio_empresa'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['tipo_pago'] }}
+                                                        <?php echo isset($fila['tipo_pagos']) ? $fila['tipo_pagos'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['clase_pagos'] }}
+                                                        <?php echo isset($fila['clase_pagos']) ? $fila['clase_pagos'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['codigo_convenio'] }}
+                                                        <?php echo isset($fila['codigo_convenio']) ? $fila['codigo_convenio'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['numero_envio'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['sistema_original'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['filler'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['casa_envio_rendicion'] }}
-                                                    </td>
-                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        0x100
+                                                        <?php echo isset($fila['numero_envio']) ? $fila['numero_envio'] : ''; ?>
                                                     </td>
                                                 </tr>
                                             @endif
@@ -337,6 +403,10 @@
                                             </th>
                                             <th
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
+                                                CUIT
+                                            </th>
+                                            <th
+                                                class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
                                                 IMPORTE
                                             </th>
                                             <th
@@ -378,22 +448,25 @@
                                                         <?php echo isset($fila['cbu']) ? $fila['cbu'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['importe_formateado'] }}
+                                                        <?php echo isset($fila['cuit']) ? $fila['cuit'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['referencia'] }}
+                                                        <?php echo isset($fila['importe']) ? $fila['importe'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['cuil'] }}
+                                                        <?php echo isset($fila['referencia']) ? $fila['referencia'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['clase_documento'] }}
+                                                        <?php echo isset($fila['identificacion_cliente']) ? $fila['identificacion_cliente'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['tipo_documento_beneficiario'] }}
+                                                       <?php echo isset($fila['clase_documento']) ? $fila['clase_documento'] : ''; ?>
                                                     </td>
                                                     <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                        {{ $fila['identificador_prestamo'] }}
+                                                        <?php echo isset($fila['tipo_documento']) ? $fila['tipo_documento'] : '';?>
+                                                    </td>
+                                                    <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
+                                                        <?php echo isset($fila['identificador_prestamo']) ? $fila['identificador_prestamo'] : '';?>
                                                     </td>
                                                 </tr>
                                             @endif
@@ -587,7 +660,7 @@
                 <div class="grid grid-cols-2 gap-8">
                     <!-- Sección izquierda para el formulario de carga de archivos -->
                     <div class="fondocolor rounded-lg shadow-lg">
-                        <form wire:submit.prevent="cargarArchivoAltaProveedor">
+                        <form wire:submit.prevent="procesarArchivosAltaProveedores">
                             <div class="bg-gray-200 px-6 py-3 rounded-md">
                                 <h2 class="text-lg font-semibold">Archivo: </h2>
                             </div>
@@ -642,9 +715,11 @@
                                     <table class="min-w-full overflow-y-auto max-h-[1200px]">
                                         <thead>
                                             <tr>
-                                                <th
-                                                    class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
+                                                <th class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider relative group">
                                                     CBU
+                                                    <div class="popup-mensaje absolute hidden -top-8 left-1/2 transform -translate-x-1/2 bg-gray-700 text-white px-2 py-1 text-center rounded text-xs opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-hover:block">
+                                                        Mensaje de error
+                                                    </div>
                                                 </th>
                                                 <th
                                                     class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
@@ -656,7 +731,7 @@
                                                 </th>
                                                 <th
                                                     class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                    Clave de Cuenta
+                                                    CUIT/CUIL/CDI
                                                 </th>
                                                 <th
                                                     class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
@@ -682,35 +757,35 @@
                                                     <tr>
                                                         <td
                                                             class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                            {{ $fila['cbu'] }}
+                                                             <?php echo isset($fila['cbu']) ? $fila['cbu'] : ''; ?>
                                                         </td>
                                                         <td
                                                             class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                            {{ $fila['alias'] }}
+                                                             <?php echo isset($fila['alias']) ? $fila['alias'] : ''; ?>
                                                         </td>
                                                         <td
                                                             class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                            {{ $fila['id_tipo'] }}
+                                                            <?php echo isset($fila['id_tipo']) ? $fila['id_tipo'] : ''; ?>
                                                         </td>
                                                         <td
                                                             class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                            {{ $fila['clave_cuenta'] }}
+                                                             <?php echo isset($fila['cuit']) ? $fila['cuit'] : ''; ?>
                                                         </td>
                                                         <td
                                                             class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                            {{ $fila['tipo_cuenta'] }}
+                                                            <?php echo isset($fila['tipo_cuenta']) ? $fila['tipo_cuenta'] : ''; ?>
                                                         </td>
                                                         <td
                                                             class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                            {{ $fila['referencia_cuenta'] }}
+                                                             <?php echo isset($fila['referencia']) ? $fila['referencia'] : ''; ?>
                                                         </td>
                                                         <td
                                                             class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                            {{ $fila['email'] }}
+                                                            <?php echo isset($fila['email']) ? $fila['email'] : ''; ?>
                                                         </td>
                                                         <td
                                                             class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                            {{ $fila['titulares'] }}
+                                                            <?php echo isset($fila['titulares']) ? $fila['titulares'] : ''; ?>
                                                         </td>
                                                     </tr>
                                                 @endif
@@ -743,4 +818,3 @@
         @endif
     </div>
 </div>
-@endsection
