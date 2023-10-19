@@ -514,13 +514,7 @@ public function cargaArchivoTipo2()
             $this->popupMessage .= 'Línea ' . $linea . ': ' . implode(', ', $camposFaltantesUnicos) . '<br>';
         }
     }
-
     $this->datosNoEncontrados = $datosNoEncontrados;
-
-    return view('livewire.carga-archivo', [
-        'datosNoEncontrados' => $datosNoEncontrados,
-        'datosProcesadosTipo2' => $datosArchivoActual,
-    ]);
 }
      
     public function cargaArchivoTipo3()
