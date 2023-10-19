@@ -201,11 +201,6 @@ class CargaArchivo extends Component
                 $this->popupMessage .= 'Línea ' . $linea . ': ' . implode(', ', $camposFaltantes) . '<br>';
             }
         }
-    
-        return view('livewire.carga-archivo', [
-            'datosNoEncontradosAltaProveedor' => $datosNoEncontrados,
-            'datosAltaProveedor' => $datosArchivoActual,
-        ]);
     }    
 
 public function cargaArchivoTipo1()
@@ -354,10 +349,6 @@ public function cargaArchivoTipo1()
 
             $this->datosNoEncontrados = $datosNoEncontrados;
 
-            return view('livewire.carga-archivo', [
-                'datosNoEncontrados' => $datosNoEncontrados,
-                'datosProcesadosTipo1' => $datosArchivoActual,
-            ]);
         }
 
         public function datosNoEncontradosTipo1($datosfaltantes){
@@ -515,11 +506,6 @@ public function cargaArchivoTipo1()
             $this->emit('datosTipo2Cargados', $this->totalImporteTipo2, count($datosArchivoActual));
 
             $this->datosNoEncontrados = $datosNoEncontrados;
-
-            return view('livewire.carga-archivo', [
-                'datosNoEncontrados' => $datosNoEncontrados,
-                'datosProcesadosTipo2' => $datosArchivoActual,
-            ]);
         }
 
         public function noEncontradosTipo2($datosFaltantes){

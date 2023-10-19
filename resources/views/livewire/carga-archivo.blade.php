@@ -1,5 +1,5 @@
 <div class="flex bg-cover bg-center bg-fixed imagenfondo">
-    <aside class="w-1/6 h-screen p-6 flex flex-col bg-gradient">
+    <aside class="w-1/7 h-screen p-6 flex flex-col bg-gradient">
         <!-- Botón para la sección "Alta Proveedores" -->
         <button wire:click="cambiarSeccion('alta_proveedor')"
             class="bg-blue-500 hover:bg-blue-600 text-white custom-btn px-4 py-2 rounded-md mb-2">Alta Proveedores
@@ -21,7 +21,7 @@
     <!-- Aquí va el contenido principal -->
 
     @if($registrosArchivos)
-    <div class="ml-2 w-2/12 p-4 bg-gray-200 rounded-2xl" style="position: absolute; left: 0; top: 56%; height: 300px;">
+    <div class="mr-3 w-2/12 p-4 bg-gray-200 rounded-2xl" style="position: absolute; right: 0; top: 56%; height: 300px;">
         <div class="bg-gray-200 px-4 py-3 rounded-md">
             <h2 class="text-lg font-semibold">Archivos Registrados:</h2>
         </div>
@@ -136,9 +136,7 @@
     @endif
 
     <div class="w-full max-w-screen-lg p-6">
-        <div class="flex mb-10 mt-5">
             
-
             {{-- <!-- Botón para la sección "Archivo de Pago" -->
             <div class="items-center ">
                 <div class="mb-4">
@@ -151,7 +149,6 @@
                     </select>
                 </div>
             </div> --}}
-        </div>
 
         
 
