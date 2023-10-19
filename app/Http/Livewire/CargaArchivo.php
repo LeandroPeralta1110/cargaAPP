@@ -508,8 +508,8 @@ public function cargaArchivoTipo1()
             $this->datosNoEncontrados = $datosNoEncontrados;
         }
 
-        public function noEncontradosTipo2($datosFaltantes){
-            if (!empty($datosFaltantes)) {
+            public function noEncontradosTipo2($datosFaltantes){
+                if (!empty($datosFaltantes)) {
                 $this->popupMessage = 'Datos no encontrados:<br>';
 
                 foreach ($datosFaltantes as $linea => $camposFaltantes) {
@@ -517,6 +517,15 @@ public function cargaArchivoTipo1()
                     $this->popupMessage .= 'Línea ' . $linea . ': ' . implode(', ', $camposFaltantesUnicos) . '<br>';
                 }
             }
+        }
+
+        public function mostrarVistaRegistroTipo2()
+        {
+            // Puedes configurar cualquier variable que necesites aquí
+            $this->seccionSeleccionada = 'registro_tipo_2';
+
+            // Redirige a la vista "registro-tipo2.blade.php"
+            return redirect()->to(route('nombre_de_la_ruta_registro_tipo2'));
         }
 
 private function validarEntidad($dato)
@@ -1424,6 +1433,17 @@ private function findLastIndexByTipoRegistro($tipoRegistro)
             $datosPaginados = array_slice($this->datosProcesadosTipo3, $desde, $this->porPagina);
         }
 
+        if ($this->seccionSeleccionada === 'registro_tipo_2') {
+            return view('livewire.registros-tipo2', [
+                'mostrarDatosTipo2' => true,
+                'datos' => $datosPaginados,
+                'total' => $total,
+                'desde' => $desde,
+                'hasta' => $hasta,
+                'seccionActual' => $this->seccionSeleccionada,
+            ]);
+        } else {
+
         return view('livewire.carga-archivo', [
             'datos' => $datosPaginados,
             'total' => $total,
@@ -1431,5 +1451,6 @@ private function findLastIndexByTipoRegistro($tipoRegistro)
             'hasta' => $hasta,
             'seccionActual' => $this->seccionSeleccionada,
         ]);
+    }
     }
 }

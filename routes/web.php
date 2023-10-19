@@ -16,3 +16,7 @@ use App\Http\Livewire\CargaArchivo;
 */
 
 Route::get('/', CargaArchivo::class)->name('cargar-archivo');
+
+Route::get('/registros-tipo2', 'CargaArchivo@mostrarVistaRegistroTipo2')
+    ->name('registros-tipo2');
+
