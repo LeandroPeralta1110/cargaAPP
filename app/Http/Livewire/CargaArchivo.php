@@ -560,7 +560,6 @@ private function validarIdentificacionCliente($dato)
     $this->mostrarMensajeErrorTipo1 = false;
     $this->mostrarMensajeErrorTipo2 = false;
     $this->mostrarMensajeErrorAltaProveedores = false;
->>>>>>>>> Temporary merge branch 2
 }
      
     public function cargaArchivoTipo3()
