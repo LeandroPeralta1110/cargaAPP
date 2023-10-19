@@ -303,6 +303,7 @@
                                 </table>
                             </div>
                         </div>
+                        <h1>Hola mundo</h1>
                             <div class="mt-4">
                                 @if ($total > $porPagina)
                                     <div class="flex justify-between">
