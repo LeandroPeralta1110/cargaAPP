@@ -504,18 +504,63 @@ public function cargaArchivoTipo2()
             if (!empty($datosFaltantes)) {
                 $this->popupMessage = 'Datos no encontrados:<br>';
 
-        foreach ($datosNoEncontrados as $linea => $camposFaltantes) {
-            $camposFaltantesUnicos = array_unique($camposFaltantes);
-            $this->popupMessage .= 'Línea ' . $linea . ': ' . implode(', ', $camposFaltantesUnicos) . '<br>';
+                foreach ($datosFaltantes as $linea => $camposFaltantes) {
+                    $camposFaltantesUnicos = array_unique($camposFaltantes);
+                    $this->popupMessage .= 'Línea ' . $linea . ': ' . implode(', ', $camposFaltantesUnicos) . '<br>';
+                }
+            }
         }
-    }
 
-    $this->datosNoEncontrados = $datosNoEncontrados;
+private function validarEntidad($dato)
+{
+    // Realiza la validación para entidad aquí, devuelve true si es válido, false en caso contrario
+    return preg_match(Expressions::$expresionEntidad, $dato);
+}
 
-    return view('livewire.carga-archivo', [
-        'datosNoEncontrados' => $datosNoEncontrados,
-        'datosProcesadosTipo2' => $datosArchivoActual,
-    ]);
+private function validarCuentaSucursal($dato)
+{
+    // Realiza la validación para CuentaSucursal aquí, devuelve true si es válido, false en caso contrario
+    return preg_match(Expressions::$expresionCuentaSucursal, $dato);
+}
+
+private function validarCBU($dato)
+{
+    // Realiza la validación para CBU aquí, devuelve true si es válido, false en caso contrario
+    return preg_match(Expressions::$expresionCBU, $dato);
+}
+
+private function validarCUIT($dato)
+{
+    // Realiza la validación para CUIT aquí, devuelve true si es válido, false en caso contrario
+    return preg_match(Expressions::$expresionCUIT, $dato);
+}
+
+private function validarImporte($dato)
+{
+    // Realiza la validación para Importe aquí, devuelve true si es válido, false en caso contrario
+    return preg_match('/-?\d+,\d{2}/', $dato);
+}
+
+private function validarReferencia($dato)
+{
+    // Realiza la validación para Referencia aquí, devuelve true si es válido, false en caso contrario
+    return preg_match(Expressions::$expresionReferencia, $dato);
+}
+
+private function validarIdentificacionCliente($dato)
+{
+    // Realiza la validación para Referencia aquí, devuelve true si es válido, false en caso contrario
+    return preg_match(Expressions::$expresionIdentificacionCliente, $dato);
+}
+
+    public function closePopup()
+{
+    $this->popupMessage = '';
+    $this->mensajeError = '';
+    $this->mostrarMensajeErrorTipo1 = false;
+    $this->mostrarMensajeErrorTipo2 = false;
+    $this->mostrarMensajeErrorAltaProveedores = false;
+>>>>>>>>> Temporary merge branch 2
 }
      
     public function cargaArchivoTipo3()

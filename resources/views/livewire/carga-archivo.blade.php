@@ -20,8 +20,6 @@
     <!-- Aside o barra izquierda -->
     <!-- Aquí va el contenido principal -->
 
-@section('content')
-<div>
     @if($registrosArchivos)
     <div class="mr-3 w-2/12 p-4 bg-gray-200 rounded-2xl" style="position: absolute; right: 0; top: 56%; height: 300px;">
         <div class="bg-gray-200 px-4 py-3 rounded-md">
