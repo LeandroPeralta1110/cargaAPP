@@ -66,122 +66,137 @@ class CargaArchivo extends Component
     //secciones para el tipo de pago, predefinido alta proveedores
     public $seccionSeleccionada = "alta_proveedor";
 
-    public function cargarArchivoAltaProveedores()
-{
-    $this->validate([
-        'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
-    ]);
+    public function procesarArchivosAltaProveedores()
+    {
+        $this->validate([
+            'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
+        ]);
+    
+        $datosNoEncontrados = [];
+        $datosArchivoActual = [];
+    
+        $contenido = file_get_contents($this->archivo->getRealPath());
+        $lineas = explode("\n", $contenido);
+    
+        $contadorRegistrosAltaProveedor = 0;
+        $contadorLinea = 0;
+    
+        foreach ($lineas as $linea) {
+            // Incrementa el contador de línea
+            $contadorLinea++;
+    
+            // Dividir la línea en elementos usando el punto y coma como separador
+            $datos = str_getcsv($linea, ';');
+    
+            // Inicializa variables para verificar si se han encontrado los campos requeridos
+            $cbuEncontrado = false;
+            $aliasEncontrado = false;
+            $idTipoEncontrado = false;
+            $cuitEncontrado = false;
+            $tipoCuentaEncontrado = false;
+            $referenciaEncontrada = false;
+            $emailEncontrado = false;
+    
+            // Arreglo para los datos validados
+            $datosValidados = [];
+            $camposFaltantes = []; 
 
-    $datosNoEncontrados = [];
-    $datosArchivoActual = [];
+            $datosValidados = [
+                'titulares' => '1',
+            ];
+    
+            foreach ($datos as $key => $dato) {
+                // Realiza la validación específica para cada tipo de dato
+                // CBU
+                if ($this->validarCBU($dato)) {
+                    $datosValidados['cbu'] = $dato;
+                    $cbuEncontrado = true;
+                } elseif ($dato === '1' || $dato === '2'|| $dato === '3') { // Id Tipo Clave
+                    $datosValidados['id_tipo'] = $dato;
+                    $idTipoEncontrado = true;
+                } elseif (in_array($dato, ['01', '02', '03', '04', '05', '06', '07'])) { // Tipo de Cuenta
+                    $datosValidados['tipo_cuenta'] = $dato;
+                    $tipoCuentaEncontrado = true;
+                } elseif ($this->validarCUIT($dato)) { // CUIT
+                    $datosValidados['cuit'] = $dato;
+                    $cuitEncontrado = true;
+                }elseif (preg_match('/^[A-Za-z0-9.]{0,22}$/', $dato)) { // Alias
+                    $alias = substr($dato, 0, 22);
+                    $alias = str_repeat('0', 22);
+                    $datosValidados['alias'] = $alias;
+                    $aliasEncontrado = true;
+                }elseif (preg_match('/^[A-Za-z0-9\s]{0,30}$/', $dato)) { // Referencia
+                    $referencia = substr($dato, 0, 30);
+                    $referencia = str_pad($referencia, 30, ' ', STR_PAD_RIGHT);
+                    $datosValidados['referencia'] = $referencia;
+                    $referenciaEncontrada = true;
+                } elseif (preg_match('/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/', $dato)) { // Email
+                    $email = substr($dato, 0, 50);
+                    $email = str_pad($email, 50, ' ', STR_PAD_RIGHT);
+                    $datosValidados['email'] = $email;
+                    $emailEncontrado = true;
+                }
 
-    $contenido = file_get_contents($this->archivo->getRealPath());
-    $lineas = explode("\n", $contenido);
+                if (!$emailEncontrado) {
+                    $datosValidados['email'] = str_repeat(' ', 50);
+                }
 
-    $contadorRegistrosAltaProveedor = 0;
-    $contadorLinea = 0;
+                if (!$referenciaEncontrada) {
+                    $datosValidados['referencia'] = str_repeat(' ', 30);
+                }
+            }
+                
+            // Verifica si todos los campos requeridos se encontraron
+            if (!empty($datosValidados)){
+                $datosArchivoActual[] = $datosValidados;
 
-    foreach ($lineas as $linea) {
-        $contadorLinea++;
-
-        $datos = str_getcsv($linea, ';');
+                if (!$cbuEncontrado) {
+                    $camposFaltantes[] = "CBU";
+                }
+                if (!$aliasEncontrado) {
+                    $camposFaltantes[] = "Alias";
+                }
+                if (!$idTipoEncontrado) {
+                    $camposFaltantes[] = "Id Tipo Clave";
+                }
+                if (!$cuitEncontrado) {
+                    $camposFaltantes[] = "CUIT";
+                }
+                if (!$tipoCuentaEncontrado) {
+                    $camposFaltantes[] = "Tipo de Cuenta";
+                }
+                if(!empty($camposFaltantes)){
+                    $datosNoEncontrados[$contadorLinea] = $camposFaltantes;
+                }
+            }
+            $contadorRegistrosAltaProveedor++;
+        }
+        $this->datosAltaProveedor = array_merge($this->datosAltaProveedor, $datosArchivoActual);
+        $this->datosNoEncontradosAltaProveedor = $datosNoEncontrados;
+    
+        $this->registrosArchivos[] = [
+            'nombre_archivo' => $this->archivo->getClientOriginalName(),
+            'tipo_registro' => 'Alta Proveedores',
+            'datos' => $datosArchivoActual,
+        ];
+    
+        $this->mostrarDatosAltaProveedor = true;
+    
+        $this->emit('datosAltaProveedorCargados', count($datosArchivoActual));
+    
+        if (!empty($datosNoEncontrados)) {
+            $this->popupMessage = 'Datos no encontrados:<br>';
         
-        $cbuEncontrado = false;
-        $aliasEncontrado = false;
-        $idTipoEncontrado = false;
-        $cuitEncontrado = false;
-        $tipoCuentaEncontrado = false;
-        $referenciaEncontrada = false;
-        $emailEncontrado = false;
-        
-        $datosValidados = [];
-
-        foreach ($datos as $key => $dato) {
-            if ($this->validarCBU($dato)) {
-                $datosValidados['cbu'] = $dato;
-                $cbuEncontrado = true;
-            } elseif ($key == 1) { // Alias
-                $alias = substr($dato, 0, 22);
-                $alias = str_pad($alias, 22, '0', STR_PAD_RIGHT);
-                $datosValidados['alias'] = $alias;
-                $aliasEncontrado = true;
-            } elseif ($this->validarIdTipoClave($dato)) {
-                $datosValidados['id_tipo'] = $dato;
-                $idTipoEncontrado = true;
-            } elseif ($this->validarCUIT($dato)) {
-                $datosValidados['cuit'] = $dato;
-                $cuitEncontrado = true;
-            } elseif ($this->validarTipoCuenta($dato)) {
-                $datosValidados['tipo_cuenta'] = $dato;
-                $tipoCuentaEncontrado = true;
-            } elseif ($key == 5) { // Referencia
-                $referencia = substr($dato, 0, 30);
-                $referencia = str_pad($referencia, 30, '0', STR_PAD_RIGHT);
-                $datosValidados['referencia'] = $referencia;
-                $referenciaEncontrada = true;
-            } elseif ($key == 6) { // Email
-                $email = substr($dato, 0, 50);
-                $email = str_pad($email, 50, ' ', STR_PAD_RIGHT);
-                $datosValidados['email'] = $email;
-                $emailEncontrado = true;
+            foreach ($datosNoEncontrados as $linea => $camposFaltantes) {
+                $this->popupMessage .= 'Línea ' . $linea . ': ' . implode(', ', $camposFaltantes) . '<br>';
             }
         }
-
-        if ($cbuEncontrado && $aliasEncontrado && $idTipoEncontrado && $cuitEncontrado && $tipoCuentaEncontrado && $referenciaEncontrada && $emailEncontrado) {
-            $datosArchivoActual[] = $datosValidados;
-        } else {
-            $camposFaltantes = [];
-            if (!$cbuEncontrado) {
-                $camposFaltantes[] = "CBU";
-            }
-            if (!$aliasEncontrado) {
-                $camposFaltantes[] = "Alias";
-            }
-            if (!$idTipoEncontrado) {
-                $camposFaltantes[] = "Id Tipo Clave";
-            }
-            if (!$cuitEncontrado) {
-                $camposFaltantes[] = "CUIT";
-            }
-            if (!$tipoCuentaEncontrado) {
-                $camposFaltantes[] = "Tipo de Cuenta";
-            }
-            if (!$referenciaEncontrada) {
-                $camposFaltantes[] = "Referencia";
-            }
-            if (!$emailEncontrado) {
-                $camposFaltantes[] = "Email";
-            }
-            $datosNoEncontrados[$contadorLinea] = $camposFaltantes;
-        }
-    }
-
-    $contadorRegistrosAltaProveedor++;
-
-    $this->datosAltaProveedor = array_merge($this->datosAltaProveedor, $datosArchivoActual);
-    $this->datosNoEncontradosAltaProveedor = $datosNoEncontrados;
-
-    $this->registrosArchivos[] = [
-        'nombre_archivo' => $this->archivo->getClientOriginalName(),
-        'tipo_registro' => 'Alta Proveedores',
-        'datos' => $datosArchivoActual,
-    ];
-
-    $this->mostrarDatosAltaProveedor = true;
-
-    $this->emit('datosAltaProveedorCargados', count($datosArchivoActual));
-
-    $this->popupMessageAltaProveedor = 'Datos no encontrados:<br>';
-    foreach ($datosNoEncontrados as $linea => $camposFaltantes) {
-        $camposFaltantesUnicos = array_unique($camposFaltantes);
-        $this->popupMessageAltaProveedor .= 'Línea ' . $linea . ': ' . implode(', ', $camposFaltantesUnicos) . '<br>';
-    }
-
-    return view('livewire.carga-archivo', [
-        'datosNoEncontradosAltaProveedor' => $datosNoEncontrados,
-        'datosAltaProveedor' => $datosArchivoActual,
-    ]);
-}
+    
+        return view('livewire.carga-archivo', [
+            'datosNoEncontradosAltaProveedor' => $datosNoEncontrados,
+            'datosAltaProveedor' => $datosArchivoActual,
+        ]);
+    }    
 
 public function cargaArchivoTipo1()
 {
@@ -326,11 +341,21 @@ if (!empty($datosValidados)){
 
     $this->datosNoEncontrados = $datosNoEncontrados;
 
-    return view('livewire.carga-archivo', [
-        'datosNoEncontrados' => $datosNoEncontrados,
-        'datosProcesadosTipo1' => $datosArchivoActual,
-    ]);
-}
+            return view('livewire.carga-archivo', [
+                'datosNoEncontrados' => $datosNoEncontrados,
+                'datosProcesadosTipo1' => $datosArchivoActual,
+            ]);
+        }
+
+        public function datosNoEncontradosTipo1($datosfaltantes){
+            if (!empty($datosfaltantes)) {
+                $this->popupMessage = 'Datos no encontrados:<br>';
+            
+                foreach ($datosfaltantes as $linea => $camposFaltantes) {
+                    $this->popupMessage .= 'Línea ' . $linea . ': ' . implode(', ', $camposFaltantes) . '<br>';
+                }
+            }
+        }
 
 public function cargaArchivoTipo2()
 {
@@ -472,8 +497,17 @@ public function cargaArchivoTipo2()
 
     $this->emit('datosTipo2Cargados', $this->totalImporteTipo2, count($datosArchivoActual));
 
-    if (!empty($datosNoEncontrados)) {
-        $this->popupMessage = 'Datos no encontrados:<br>';
+            $this->datosNoEncontrados = $datosNoEncontrados;
+
+            return view('livewire.carga-archivo', [
+                'datosNoEncontrados' => $datosNoEncontrados,
+                'datosProcesadosTipo2' => $datosArchivoActual,
+            ]);
+        }
+
+        public function noEncontradosTipo2($datosFaltantes){
+            if (!empty($datosFaltantes)) {
+                $this->popupMessage = 'Datos no encontrados:<br>';
 
         foreach ($datosNoEncontrados as $linea => $camposFaltantes) {
             $camposFaltantesUnicos = array_unique($camposFaltantes);
