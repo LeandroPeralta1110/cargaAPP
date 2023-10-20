@@ -150,8 +150,6 @@
                 </div>
             </div> --}}
 
-        
-
         <!-- Contenido de la sección REGISTRO  TIPO 1-->
         @if ($seccionSeleccionada === 'registro_tipo_1')
             <!-- Coloca aquí el contenido de la sección "Registro Tipo 1" -->
@@ -160,7 +158,7 @@
                 <!-- Sección izquierda para el formulario de carga de archivos -->
                 <div class="fondocolor rounded-lg shadow-lg">
                     <form wire:submit.prevent="cargaArchivoTipo1">
-                        <div class="bg-gray-200 px-6 py-3 rounded-md">
+                        <div class="bg-gradient px-6 py-3 rounded-md">
                             <h2 class="text-lg font-semibold">Archivo: </h2>
                         </div>
                         <input class="text-white p-4" type="file" wire:model="archivo">
@@ -172,7 +170,7 @@
 
                 <!-- Sección derecha para las instrucciones -->
                 <div class="fondocolor rounded-lg shadow-lg ">
-                    <div class="bg-gray-200 px-6 py-3 rounded-md">
+                    <div class="bg-gradient px-6 py-3 rounded-md">
                         <h2 class="text-lg font-semibold">Instructivo: </h2>
                     </div>
                     <p class="text-white p-4">La aplicacion permite archivos CSV y TXT.</p>
@@ -183,7 +181,7 @@
                 <!-- Sección inferior para el contenido del archivo (Ocupa dos columnas) -->
                 <div class="col-span-2 mt-4 bg-white rounded-lg shadow-lg">
                     <!-- Cabecera del contenido de los datos extraídos -->
-                    <div class="bg-gray-200 px-6 py-3 rounded-md">
+                    <div class="bg-gradient px-6 py-3 rounded-md">
                         <h2 class="text-lg font-semibold">Datos Extraídos</h2>
                     </div>
      
@@ -331,19 +329,22 @@
                 <!-- Sección izquierda para el formulario de carga de archivos -->
                 <div class="fondocolor rounded-lg shadow-lg">
                     <form wire:submit.prevent="cargaArchivoTipo2">
-                        <div class="bg-gray-200 px-6 py-3 rounded-md">
+                        <div class="bg-gradient px-6 py-3 rounded-md">
                             <h2 class="text-lg font-semibold">Archivo: </h2>
                         </div>
                         <input class="text-white p-4" type="file" wire:model="archivo">
-                        <button type="submit"
-                            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 m-4 rounded-md mt-4">Cargar
-                            Archivo</button>
+                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 m-4 rounded-md mt-4">Cargar Archivo</button>
+                        @if($cargando)
+                            <!-- Indicador de carga (puedes personalizarlo) -->
+                            <div class="loader"></div>
+                        @endif
                     </form>
                 </div>
+                
 
                 <!-- Sección derecha para las instrucciones -->
                 <div class="fondocolor rounded-lg shadow-lg ">
-                    <div class="bg-gray-200 px-6 py-3 rounded-md">
+                    <div class="bg-gradient px-6 py-3 rounded-md">
                         <h2 class="text-lg font-semibold">Instructivo: </h2>
                     </div>
                     <p class="text-white p-4">La aplicacion permite archivos CSV y TXT.</p>
@@ -354,7 +355,7 @@
                 <!-- Sección inferior para el contenido del archivo (Ocupa dos columnas) -->
                 <div class="col-span-2 mt-4 bg-white rounded-lg shadow-lg">
                     <!-- Cabecera del contenido de los datos extraídos -->
-                    <div class="bg-gray-200 px-6 py-3 rounded-md">
+                    <div class="bg-gradient px-6 py-3 rounded-md">
                         <h2 class="text-lg font-semibold">Datos Extraídos</h2>
                     </div>
 
@@ -502,7 +503,7 @@
 
                 <!-- Sección derecha para las instrucciones -->
                 <div class="fondocolor rounded-lg shadow-lg ">
-                    <div class="bg-gray-200 px-6 py-3 rounded-md">
+                    <div class="bg-gradient px-6 py-3 rounded-md">
                         <h2 class="text-lg font-semibold">Instructivo: </h2>
                     </div>
                     <p class="text-white p-4">La aplicacion permite archivos CSV y TXT.</p>
@@ -513,7 +514,7 @@
                 <!-- Sección inferior para el contenido del archivo (Ocupa dos columnas) -->
                 <div class="col-span-2 mt-4 bg-white rounded-lg shadow-lg">
                     <!-- Cabecera del contenido de los datos extraídos -->
-                    <div class="bg-gray-200 px-6 py-3 rounded-md">
+                    <div class="bg-gradient px-6 py-3 rounded-md">
                         <h2 class="text-lg font-semibold">Datos Extraídos</h2>
                     </div>
 
@@ -661,7 +662,7 @@
                     <!-- Sección izquierda para el formulario de carga de archivos -->
                     <div class="fondocolor rounded-lg shadow-lg">
                         <form wire:submit.prevent="procesarArchivosAltaProveedores">
-                            <div class="bg-gray-200 px-6 py-3 rounded-md">
+                            <div class="bg-gradient px-6 py-3 rounded-md">
                                 <h2 class="text-lg font-semibold">Archivo: </h2>
                             </div>
                             <input class="text-white p-4" type="file" wire:model="archivo">
@@ -673,7 +674,7 @@
 
                     <!-- Sección derecha para las instrucciones -->
                     <div class="fondocolor rounded-lg shadow-lg ">
-                        <div class="bg-gray-200 px-6 py-3 rounded-md">
+                        <div class="bg-gradient px-6 py-3 rounded-md">
                             <h2 class="text-lg font-semibold">Instructivo: </h2>
                         </div>
                         <p class="text-white p-4">La aplicacion permite archivos CSV y TXT.</p>
@@ -684,7 +685,7 @@
                     <!-- Sección inferior para el contenido del archivo (Ocupa dos columnas) -->
                     <div class="col-span-2 mt-4 bg-white rounded-lg shadow-lg">
                         <!-- Cabecera del contenido de los datos extraídos -->
-                        <div class="bg-gray-200 px-6 py-3 rounded-md">
+                        <div class="bg-gradient px-6 py-3 rounded-md">
                             <h2 class="text-lg font-semibold">Datos Extraídos</h2>
                         </div>
 

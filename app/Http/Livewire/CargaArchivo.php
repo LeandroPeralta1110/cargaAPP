@@ -10,12 +10,13 @@ use Illuminate\Database\Query\Expression;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-
+use App\Jobs\ProcesarArchivoJob;
 class CargaArchivo extends Component
 {
     use WithFileUploads;
 
     protected $listeners = ['datosTipo2Cargados' => 'cargaArchivoTipo3'];
+    protected $listener = ['datosProcesados' => 'mostrarDatosProcesados'];
     protected $identificador;
 
     public $datosAltaProveedor = [];
@@ -51,6 +52,8 @@ class CargaArchivo extends Component
     public $datosNoEncontradosAltaProveedor = [];
     public $mostrarDatosFaltantesTipo1 = [];
     public $popupMessageAltaProveedor = [];
+    public $cargando = false;
+    public $datosArchivoActual = [];
 
     public $ultimoArchivo = [];
     public $cantidadDatos = 0; 
@@ -361,152 +364,19 @@ public function cargaArchivoTipo1()
             }
         }
 
-        public function cargaArchivoTipo2()
-        {
-            $this->validate([
-                'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
-            ]);
+            public function cargaArchivoTipo2()
+    {
+        $this->validate([
+            'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
+        ]);
 
-            $datosNoEncontrados = [];
-            $datosArchivoActual = [];
+        $this->cargando = true;
 
-            $contenido = file_get_contents($this->archivo->getRealPath());
-            $lineas = explode("\n", $contenido);
-
-            $identificadorTipo2 = uniqid();
-            $this->identificadorTipo2 = $identificadorTipo2;
-
-            $contadorRegistrosTipo2 = 0;
-            $contadorLinea = 0;
-
-            foreach ($lineas as $linea) {
-                // Incrementa el contador de línea
-                $contadorLinea++;
-            
-                // Dividir la línea en elementos usando el punto y coma como separador
-                $datos = str_getcsv($linea, ';');
-            
-                // Inicializa datos preestablecidos con ceros
-                $datosPreestablecidos = [
-                    'identificacion_cliente'=> '1',
-                    'clase_documento' => '0',
-                    'tipo_documento' => '00',
-                    'uso_BNA'=> '00',
-                    'nro_documento' => str_repeat('0',11),
-                    'estado' => '00',
-                    'datos_de_la_empresa' => str_repeat(' ',13),
-                    'cuil_con_ceros'=> str_repeat('0',11),
-                    'identificador_prestamo' => '0000',
-                    'nro_operacion_link' => str_repeat( ' ',9),
-                    'sucursal' => str_repeat(' ', 4),
-                    'numero_registro_link' => str_repeat(' ',6),
-                    'observaciones' => str_repeat(' ',15),
-                    'filler' => str_repeat(' ',62),
-                ];
-            
-                $datosValidados = [
-                    'tipo_registro' => '2',
-                    'identificador_tipo2' => $identificadorTipo2,
-                ];
-            
-                $cbuEncontrado = false; // Variable para verificar si se encontró CBU en esta línea
-                $entidadEncontrada = false;
-                $cuentaSucursalEncontrada = false;
-                $cuitEncontrado = false;
-                $importeEncontrado = false;
-                $referenciaEncontrada = false;
-                $identificacionClienteEncontrada = false;
-                $camposFaltantes = [];
-            
-                foreach ($datos as $key => $dato) {
-                    // Realiza la validación específica para cada tipo de dato
-                    if ($this->validarCBU($dato)) {
-                        $datosValidados['cbu'] = $dato; 
-                        $cbuEncontrado = true;
-                        $entidadEncontrada = true;
-                        $cuentaSucursalEncontrada = true;
-                        // Divide el CBU en entidad y sucursal
-                        $entidad = substr($dato, 0, 3);
-                        $sucursal = substr($dato, 4, 3);
-                        $datosValidados['entidad_acreditar'] = $entidad;
-                        $datosValidados['sucursal_acreditar'] = $sucursal;
-                    } elseif ($this->validarCUIT($dato)) {
-                        $datosValidados['cuit'] = $dato;
-                        $cuitEncontrado = true;
-                    } elseif (!$importeEncontrado && $this->validarImporte($dato)) {
-                        $importe = preg_replace('/[^0-9.,$-]/', '', $dato);
-                        // Remover signos negativos
-                        $importe = str_replace('-', '', $importe);
-                        // Agregar el signo de peso al importe
-                        $datosValidados['importe'] = '$' . $importe;
-                        $importeEncontrado = true;
-                    } elseif ($dato === 'DEBITO AUTOMATICO' || $dato === 'DEBIN' || $dato === 'TARJETA DE CREDITO') {
-                        $datosValidados['referencia'] = $dato;
-                        $referenciaEncontrada = true;
-                    }
-                
-                    // Verifica si la referencia no se encontró y la establece en 15 espacios en blanco
-                    if (!$referenciaEncontrada) {
-                        $datosValidados['referencia'] = str_repeat(' ', 15);
-                    }
-                }
-            
-                // Agrega los datos preestablecidos a cada fila
-                $datosValidados += $datosPreestablecidos;
-            
-                if (!empty($datosValidados)){
-                    $datosArchivoActual[] = $datosValidados;
-                // Agrega los datos procesados solo si todos los campos requeridos están presentes
-                if (!$cbuEncontrado) {
-                    $camposFaltantes[] = "CBU";
-                }
-
-                if (!$entidadEncontrada) {
-                    $camposFaltantes[] = "COD.ENTIDAD";
-                }
-
-                if (!$cuentaSucursalEncontrada) {
-                    $camposFaltantes[] = "COD.SUCURSAL";
-                }
-
-                if (!$cuitEncontrado) {
-                    $camposFaltantes[] = "CUIT";
-                }
-
-                if (!$importeEncontrado) {
-                    $camposFaltantes[] = "IMPORTE";
-                }
-
-                /* if (!$identificacionClienteEncontrada) {
-                    $camposFaltantes[] = "IDENTIFICACION CLIENTE";
-                } */
-
-                if(!empty($camposFaltantes)){
-                    $datosNoEncontrados[$contadorLinea] = $camposFaltantes;
-                }
-            }
-            }
-
-            $this->datosProcesadosTipo2 = array_merge($this->datosProcesadosTipo2, $datosArchivoActual);
-
-            if(!empty($datosNoEncontrados)){
-                $this->datosFaltantesTipo2 = $datosNoEncontrados;
-                $this->noEncontradosTipo2($this->datosFaltantesTipo2);
-            }
-
-            $this->registrosArchivos[] = [
-                'identificador_tipo2' => $identificadorTipo2,
-                'nombre_archivo' => $this->archivo->getClientOriginalName(),
-                'tipo_registro' => 'Registros tipo 2',
-                'datos' => $datosArchivoActual,
-            ];
-
-            $this->mostrarDatosTipo2 = true;
-
-            $this->emit('datosTipo2Cargados', $this->totalImporteTipo2, count($datosArchivoActual));
-
-            $this->datosNoEncontrados = $datosNoEncontrados;
-        }
+        $componenteLivewire = app(CargaArchivo::class);
+       
+        // Despacha una tarea para procesar el archivo de manera asincrónica
+        ProcesarArchivoJob::dispatch($componenteLivewire);
+    }
 
         public function noEncontradosTipo2($datosFaltantes){
             if (!empty($datosFaltantes)) {
@@ -517,6 +387,14 @@ public function cargaArchivoTipo1()
                     $this->popupMessage .= 'Línea ' . $linea . ': ' . implode(', ', $camposFaltantesUnicos) . '<br>';
                 }
             }
+        }
+
+        public function mostrarDatosProcesados($datosProcesadosTipo2, $registrosArchivos, $cargando, $datosNoEncontrados)
+        {
+            $this->datosProcesadosTipo2 = $datosProcesadosTipo2;
+            $this->registrosArchivos = $registrosArchivos;
+            $this->cargando = $cargando;
+            $this->datosNoEncontrados = $datosNoEncontrados;
         }
 
 private function validarEntidad($dato)

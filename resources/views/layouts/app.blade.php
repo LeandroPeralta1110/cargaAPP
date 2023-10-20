@@ -40,6 +40,7 @@
         @livewireScripts
         <script src="{{ asset('build/assets/app.js') }}"></script>
         <script>
+            
             // JavaScript para mostrar el pie de página cuando se desplaza el contenido
             window.addEventListener('scroll', function() {
                 var footer = document.getElementById('footer');
