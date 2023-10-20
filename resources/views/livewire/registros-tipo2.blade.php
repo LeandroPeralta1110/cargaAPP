@@ -1,5 +1,5 @@
 <div>
-    <div class="flex bg-cover bg-center bg-fixed imagenfondo">
+    <div class="flex bg-cover bg-center bg-fixed">
     <aside class="w-1/7 h-screen p-6 flex flex-col bg-gradient">
         <!-- Botón para la sección "Alta Proveedores" -->
         <button wire:click="cambiarSeccion('alta_proveedor')"

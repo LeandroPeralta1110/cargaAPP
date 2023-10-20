@@ -18,21 +18,8 @@
                 class="bg-blue-500 hover:bg-blue-600 text-white custom-btn px-4 py-2 rounded-md mb-2">Registros tipo 3
             </button>
         </aside>
-    <!-- Coloca aquí el contenido de la sección "Registro Tipo 1" -->
-    <p class="text-white">SECCION PARA REGISTROS TIPO 1</p>
-    <div class="grid grid-cols-2 gap-8">
-        <!-- Sección izquierda para el formulario de carga de archivos -->
-        <div class="fondocolor rounded-lg shadow-lg">
-            <form wire:submit.prevent="cargaArchivoTipo1">
-                <div class="bg-gray-200 px-6 py-3 rounded-md">
-                    <h2 class="text-lg font-semibold">Archivo: </h2>
-                </div>
-                <input class="text-white p-4" type="file" wire:model="archivo">
-                <button type="submit"
-                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 m-4 rounded-md mt-4">Cargar
-                    Archivo</button>
-            </form>
-        </div>
+    <p class="text-white">SECCION PARA REGISTROS TIPO 3</p>
+    <div class="grid grid-cols-1 gap-8">
 
         <!-- Sección derecha para las instrucciones -->
         <div class="fondocolor rounded-lg shadow-lg ">
@@ -40,7 +27,7 @@
                 <h2 class="text-lg font-semibold">Instructivo: </h2>
             </div>
             <p class="text-white p-4">La aplicacion permite archivos CSV y TXT.</p>
-            <p class="text-white p-4">Este registro consigna los principales datos de la Empresa, titular del convenio de pago.</p>
+            <p class="text-white p-4">Este registro contiene el resumen de la cantidad de pagos a efectuar y el monto total abonado.</p>
             <!-- Agrega cualquier otra información o instrucciones que necesites -->
         </div>
 
@@ -52,113 +39,112 @@
             </div>
 
             <!-- Contenido del Archivo (Mostrado si hay contenido) -->
-            <div class="fondocolor p-6">
-                <div class="transition-all duration-500 ease-in-out">
-                @if ($mostrarDatosTipo1)
+            <div class="fondocolor p-6" wire:transition.opacity.duration.500ms.ease-in-out
+                x-data="{ isOpen: false }">
+                @if ($mostrarDatosTipo3)
                     <p class="text-white text-sm font-medium text-gray-600">
-                        {{ count($datosProcesadosTipo1) }} Datos encontrados
+                        {{ count($datosProcesadosTipo3) }} Datos encontrados
                     </p>
-                    <div class="flex">
-                        <div class="p-2 flex items-center">
-                            <button>
-                                <a wire:click="descargarDatosRegistroTipo1"
-                                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">Descargar Datos</a>
-                            </button>
-                        </div>
-                        <div class="p-2">
-                            <form wire:submit.prevent="eliminarUltimoArchivoTipo1">
-                                <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md">
-                                    Volver
-                                </button>
-                            </form>
-                        </div>
+                    <div class="p-2">
+                        <button>
+                            <a wire:click="descargarDatosRegistroTipo3"
+                                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">Descargar
+                                Datos</a>
+                        </button>
                     </div>
-                    <div style="max-height: 400px; overflow-y: auto;">
-                        <table class="min-w-full">
+                    <div class="overflow-y-auto max-h-[400px]" >
+                        <table class="min-w-full overflow-y-auto max-h-[1200px]" wire:key="miTabla">
                             <thead>
                                 <tr>
-                                    <th style="height: 20px;"
-                                        class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider" >
+                                    <th
+                                        class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
                                         REGISTRO
                                     </th>
                                     <th
                                         class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                        CUIT EMPRESA
+                                        TOTAL IMPORTE
                                     </th>
                                     <th
                                         class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                        CUENTA SUC.
+                                        TOTAL CANT. REGISTROS TIPO 2
                                     </th>
                                     <th
                                         class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                        CBU
+                                        IMPORTE ACEPTADOS
                                     </th>
                                     <th
                                         class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                        MONEDA
+                                        CANTIDAD DE REGISTROS TIPO 2 ACEPTADOS
                                     </th>
                                     <th
                                         class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                        FECHA DE PAGO
+                                        IMPORTE RECHAZADOS
                                     </th>
                                     <th
                                         class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                        INFO CRITERIO EMPRESA
+                                        CANTIDAD DE REGISTROS TIPO 2 RECHAZADOS
                                     </th>
                                     <th
                                         class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                        TIPO PAGO
+                                        IMPORTE COMISIONES
                                     </th>
                                     <th
                                         class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                        CLASE PAGOS
+                                        IMPORTE IVA
                                     </th>
                                     <th
                                         class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                        CODIGO CONVENIO
+                                        IMPORTE RETENCION IVA
                                     </th>
                                     <th
                                         class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                        NUMERO DE ENVIO
+                                        IMPORTE PERCEPCION INGRESOS BRUTOS
+                                    </th>
+                                    <th
+                                        class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
+                                        IMPORTE SELLADO PROVINCIAL
                                     </th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white">
-                                @foreach ($datosProcesadosTipo1 as $index => $fila)
+                                @foreach ($datosProcesadosTipo3 as $index => $fila)
                                     @if ($index >= $desde && $index < $hasta)
                                         <tr>
                                             <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
                                                 {{ $fila['tipo_registro'] }}
                                             </td>
                                             <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                <?php echo isset($fila['cuit']) ? $fila['cuit'] : ''; ?>
+                                                {{ $fila['total_importe'] }}
                                             </td>
                                             <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                <?php echo isset($fila['entidad_acreditar']) ? $fila['entidad_acreditar'] : ''; ?>
+                                                {{ $fila['total_registros'] }}
                                             </td>
                                             <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                <?php echo isset($fila['cbu']) ? $fila['cbu'] : ''; ?>
+                                                {{ $fila['importe_aceptados'] }}
                                             </td>
                                             <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                <?php echo isset($fila['moneda']) ? $fila['moneda'] : ''; ?>
+                                                {{ $fila['cantidad_registros_tipo2_aceptados'] }}
                                             </td>
                                             <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                <?php echo isset($fila['fecha_pago']) ? $fila['fecha_pago'] : ''; ?>
+                                                {{ $fila['importes_rechazados'] }}
                                             </td>
                                             <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                <?php echo isset($fila['info_criterio_empresa']) ? $fila['info_criterio_empresa'] : ''; ?>
+                                                {{ $fila['cantidad_registros_tipo2_rechazados'] }}
                                             </td>
                                             <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                <?php echo isset($fila['tipo_pagos']) ? $fila['tipo_pagos'] : ''; ?>
+                                                {{ $fila['importe_comision'] }}
                                             </td>
                                             <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                <?php echo isset($fila['clase_pagos']) ? $fila['clase_pagos'] : ''; ?>
+                                                {{ $fila['importe_IVA'] }}
                                             </td>
                                             <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                <?php echo isset($fila['codigo_convenio']) ? $fila['codigo_convenio'] : ''; ?>
+                                                {{ $fila['importe_retencion_IVA'] }}
                                             </td>
                                             <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
-                                                <?php echo isset($fila['numero_envio']) ? $fila['numero_envio'] : ''; ?>
+                                                {{ $fila['importe_ingreso_bruto'] }}
+                                            </td>
+                                            <td class="px-2 py-4 whitespace-no-wrap border-b border-gray-200">
+                                                {{ $fila['importe_sellado_provincial'] }}
                                             </td>
                                         </tr>
                                     @endif
@@ -166,8 +152,6 @@
                             </tbody>
                         </table>
                     </div>
-                </div>
-                <h1>Hola mundo</h1>
                     <div class="mt-4">
                         @if ($total > $porPagina)
                             <div class="flex justify-between">
@@ -185,6 +169,7 @@
                             </div>
                         @endif
                     </div>
+                @endif
             </div>
         </div>
     </div>
