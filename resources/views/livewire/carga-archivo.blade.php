@@ -1,4 +1,4 @@
-<div class="flex bg-cover bg-center bg-fixed imagenfondo">
+<div class="flex bg-cover bg-center bg-fixed">
     <aside class="w-1/7 h-screen p-6 flex flex-col bg-gradient">
         <!-- Botón para la sección "Alta Proveedores" -->
         <button wire:click="cambiarSeccion('alta_proveedor')"
@@ -155,7 +155,7 @@
         <!-- Contenido de la sección REGISTRO  TIPO 1-->
         @if ($seccionSeleccionada === 'registro_tipo_1')
             <!-- Coloca aquí el contenido de la sección "Registro Tipo 1" -->
-            <p class="text-white">SECCION PARA REGISTROS TIPO 1</p>
+            <p class="text-indigo-600">SECCION PARA REGISTROS TIPO 1</p>
             <div class="grid grid-cols-2 gap-8">
                 <!-- Sección izquierda para el formulario de carga de archivos -->
                 <div class="fondocolor rounded-lg shadow-lg">
@@ -326,7 +326,7 @@
             </div>
         @elseif ($seccionSeleccionada === 'registro_tipo_2')
             <!-- Coloca aquí el contenido de la sección "Registro Tipo 2" -->
-            <p class="text-white">SECCION PARA REGISTROS TIPO 2</p>
+            <p class="text-indigo-600">SECCION PARA REGISTROS TIPO 2</p>
             <div class="grid grid-cols-2 gap-8">
                 <!-- Sección izquierda para el formulario de carga de archivos -->
                 <div class="fondocolor rounded-lg shadow-lg">
@@ -497,7 +497,7 @@
             </div>
         @elseif ($seccionSeleccionada === 'registro_tipo_3')
             <!-- Coloca aquí el contenido de la sección "Registro Tipo 3" -->
-            <p class="text-white">SECCION PARA REGISTROS TIPO 3</p>
+            <p class="text-indigo-600">SECCION PARA REGISTROS TIPO 3</p>
             <div class="grid grid-cols-1 gap-8">
 
                 <!-- Sección derecha para las instrucciones -->
@@ -656,7 +656,7 @@
 
         @if ($seccionSeleccionada === 'alta_proveedor')
             <section>
-                <h3 class="text-white">SECCION DE ALTA A PROVEEDORES</h3>
+                <h3 class="text-indigo-600">SECCION DE ALTA A PROVEEDORES</h3>
                 <div class="grid grid-cols-2 gap-8">
                     <!-- Sección izquierda para el formulario de carga de archivos -->
                     <div class="fondocolor rounded-lg shadow-lg">
