@@ -21,7 +21,6 @@ class ProcesarArchivoJob implements ShouldQueue
 
     use WithFileUploads;
 
-    protected $listeners = ['datosTipo2Cargados' => 'cargaArchivoTipo3'];
     protected $identificador;
 
     public $datosAltaProveedor = [];
@@ -82,18 +81,15 @@ class ProcesarArchivoJob implements ShouldQueue
     public $porPagina = 6; // Número de elementos por página
     public $pagina = 1; // Página actual
 
-    //secciones para el tipo de pago, predefinido alta proveedores
-    public $seccionSeleccionada = "alta_proveedor";
-
     /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct(CargaArchivo $componenteLivewire)
-{
-    $this->componenteLivewire = $componenteLivewire;
-}
+    public function __construct($path)
+    {
+        $this->archivo = $path; // Almacena la ruta del archivo
+    }
 
     /**
      * Execute the job.
@@ -102,20 +98,14 @@ class ProcesarArchivoJob implements ShouldQueue
      */
     public function handle()
     {
-        $validator = Validator::make(['archivo' => $this->archivo], [
-            'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
-        ]);
-    
-        if ($validator->fails()) {
-            throw new ValidationException($validator);
-        }
-      
-            $this->cargando = true;
+        $path = $this->archivo; // Ruta del archivo disponible en el Job
 
+        // Ahora puedes cargar el contenido del archivo desde la ruta
+        $contenido = file_get_contents(storage_path('app/' . $path));
+      
         $datosNoEncontrados = [];
         $datosArchivoActual = [];
 
-        $contenido = file_get_contents($this->archivo->getRealPath());
         $lineas = explode("\n", $contenido);
 
         $identificadorTipo2 = uniqid();
@@ -201,6 +191,7 @@ class ProcesarArchivoJob implements ShouldQueue
                     $datosValidados['referencia'] = str_repeat(' ', 15);
                 }
             }
+            
         
             // Agrega los datos preestablecidos a cada fila
             $datosValidados += $datosPreestablecidos;
@@ -247,7 +238,7 @@ class ProcesarArchivoJob implements ShouldQueue
 
         $this->registrosArchivos[] = [
             'identificador_tipo2' => $identificadorTipo2,
-            'nombre_archivo' => $this->archivo->getClientOriginalName(),
+            'nombre_archivo' => basename($path),
             'tipo_registro' => 'Registros tipo 2',
             'datos' => $datosArchivoActual,
         ];
@@ -257,9 +248,9 @@ class ProcesarArchivoJob implements ShouldQueue
 
         $this->datosNoEncontrados = $datosNoEncontrados;
 
-        $this->componenteLivewire->datosTipo2Cargados($this->totalImporteTipo2, count($datosArchivoActual));
-        event(new DatosProcesados($this->datosProcesadosTipo2, $this->registrosArchivos,$this->cargando,$this->datosNoEncontrados));
-
+        $this->mostrarDatosTipo2 = true;
+        
+        event(new DatosProcesados($this->datosProcesadosTipo2, $this->registrosArchivos,$this->cargando,$this->datosNoEncontrados,$this->mostrarDatosTipo2));
     }
 
     public function noEncontradosTipo2($datosFaltantes){

@@ -11,12 +11,16 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use App\Jobs\ProcesarArchivoJob;
+use App\Listeners\ProcesarDatosProcesados;
+use App\Events\DatosProcesados;
+use Illuminate\Queue\Listener;
+
 class CargaArchivo extends Component
 {
     use WithFileUploads;
 
-    protected $listeners = ['datosTipo2Cargados' => 'cargaArchivoTipo3'];
-    protected $listener = ['datosProcesados' => 'mostrarDatosProcesados'];
+    protected $listeners = ['DatosProcesados' => 'mostrarDatosProcesados'];
+
     protected $identificador;
 
     public $datosAltaProveedor = [];
@@ -77,7 +81,7 @@ class CargaArchivo extends Component
     public $pagina = 1; // Página actual
 
     //secciones para el tipo de pago, predefinido alta proveedores
-    public $seccionSeleccionada = "alta_proveedor";
+    public $seccionSeleccionada = "registro_tipo_2";
 
     public function procesarArchivosAltaProveedores()
     {
@@ -364,19 +368,20 @@ public function cargaArchivoTipo1()
             }
         }
 
-            public function cargaArchivoTipo2()
-    {
-        $this->validate([
-            'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
-        ]);
+        public function cargaArchivoTipo2()
+        {
+            $this->validate([
+                'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
+            ]);
 
-        $this->cargando = true;
+            $this->cargando = true;
 
-        $componenteLivewire = app(CargaArchivo::class);
-       
-        // Despacha una tarea para procesar el archivo de manera asincrónica
-        ProcesarArchivoJob::dispatch($componenteLivewire);
-    }
+            // Almacena el archivo en el sistema de archivos local de Laravel
+            $path = $this->archivo->store('archivos'); // "archivos" es la carpeta de almacenamiento
+
+            // Despacha una tarea para procesar el archivo de manera asincrónica
+            ProcesarArchivoJob::dispatch($path); // Pasa la ruta del archivo al Job
+        }
 
         public function noEncontradosTipo2($datosFaltantes){
             if (!empty($datosFaltantes)) {
@@ -392,6 +397,7 @@ public function cargaArchivoTipo1()
         public function mostrarDatosProcesados($datosProcesadosTipo2, $registrosArchivos, $cargando, $datosNoEncontrados)
         {
             $this->datosProcesadosTipo2 = $datosProcesadosTipo2;
+            dd($this->datosProcesadosTipo2);
             $this->registrosArchivos = $registrosArchivos;
             $this->cargando = $cargando;
             $this->datosNoEncontrados = $datosNoEncontrados;

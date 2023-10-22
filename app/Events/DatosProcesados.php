@@ -9,6 +9,8 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use App\Http\Livewire\CargaArchivo;
+use Mockery;
 
 class DatosProcesados
 {
@@ -20,6 +22,7 @@ class DatosProcesados
     public $cargando;
     public $datosNoEncontrados;
     public $datosProcesadosTipo2;
+    public $mostrarDatosTipo2;
 
     /**
      * Create a new event instance.
@@ -27,12 +30,13 @@ class DatosProcesados
      * @return void
      */
 
-    public function __construct($datosProcesadosTipo2, $registrosArchivos,$cargando,$datosNoEncontrados)
+    public function __construct($datosProcesadosTipo2, $registrosArchivos,$cargando,$datosNoEncontrados,$mostrarDatosTipo2)
     {
         $this->datosProcesadosTipo2 = $datosProcesadosTipo2;
         $this->registrosArchivos = $registrosArchivos;
         $this->cargando = $cargando;
         $this->datosNoEncontrados = $datosNoEncontrados;
+        $this->mostrarDatosTipo2 = $mostrarDatosTipo2;
     }
 
     /**
