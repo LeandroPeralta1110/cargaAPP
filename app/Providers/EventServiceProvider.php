@@ -20,8 +20,8 @@ class EventServiceProvider extends ServiceProvider
         Registered::class => [
             SendEmailVerificationNotification::class,
         ],
-        'App/Events/DatosProcesados' => [
-            'App/Listeners/ProcesarDatosProcesados',
+        DatosProcesados::class => [
+            ProcesarDatosProcesados::class,
         ],
     ];
 
