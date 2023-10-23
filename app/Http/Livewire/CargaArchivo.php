@@ -373,14 +373,159 @@ public function cargaArchivoTipo1()
             $this->validate([
                 'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
             ]);
-
             $this->cargando = true;
 
-            // Almacena el archivo en el sistema de archivos local de Laravel
-            $path = $this->archivo->store('archivos'); // "archivos" es la carpeta de almacenamiento
+        // Ahora puedes cargar el contenido del archivo desde la ruta
+        $contenido = file_get_contents($this->archivo->getRealPath());
+      
+        $datosNoEncontrados = [];
+        $datosArchivoActual = [];
 
-            // Despacha una tarea para procesar el archivo de manera asincrónica
-            ProcesarArchivoJob::dispatch($path); // Pasa la ruta del archivo al Job
+        $lineas = explode("\n", $contenido);
+
+        $identificadorTipo2 = uniqid();
+        $this->identificadorTipo2 = $identificadorTipo2;
+
+        $contadorRegistrosTipo2 = 0;
+        $contadorLinea = 0;
+
+        foreach ($lineas as $linea) {
+            // Incrementa el contador de línea
+            $contadorLinea++;
+        
+            // Dividir la línea en elementos usando el punto y coma como separador
+            $datos = str_getcsv($linea, ';');
+        
+            // Inicializa datos preestablecidos con ceros
+            $datosPreestablecidos = [
+                'identificacion_cliente'=> '1',
+                'clase_documento' => '0',
+                'tipo_documento' => '00',
+                'uso_BNA'=> '00',
+                'nro_documento' => str_repeat('0',11),
+                'estado' => '00',
+                'datos_de_la_empresa' => str_repeat(' ',13),
+                'cuil_con_ceros'=> str_repeat('0',11),
+                'identificador_prestamo' => '0000',
+                'nro_operacion_link' => str_repeat( ' ',9),
+                'sucursal' => str_repeat(' ', 4),
+                'numero_registro_link' => str_repeat(' ',6),
+                'observaciones' => str_repeat(' ',15),
+                'filler' => str_repeat(' ',62),
+            ];
+        
+            $datosValidados = [
+                'tipo_registro' => '2',
+                'identificador_tipo2' => $identificadorTipo2,
+            ];
+        
+            $cbuEncontrado = false; // Variable para verificar si se encontró CBU en esta línea
+            $entidadEncontrada = false;
+            $cuentaSucursalEncontrada = false;
+            $cuitEncontrado = false;
+            $importeEncontrado = false;
+            $referenciaEncontrada = false;
+            $identificacionClienteEncontrada = false;
+            $camposFaltantes = [];
+        
+            foreach ($datos as $key => $dato) {
+                // Realiza la validación específica para cada tipo de dato
+                if ($this->validarCBU($dato)) {
+                    $datosValidados['cbu'] = $dato; 
+                    $cbuEncontrado = true;
+                    $entidadEncontrada = true;
+                    $cuentaSucursalEncontrada = true;
+                    // Divide el CBU en entidad y sucursal
+                    $entidad = substr($dato, 0, 3);
+                    $sucursal = substr($dato, 4, 3);
+                    $datosValidados['entidad_acreditar'] = $entidad;
+                    $datosValidados['sucursal_acreditar'] = $sucursal;
+                } elseif ($this->validarCUIT($dato)) {
+                    $datosValidados['cuit'] = $dato;
+                    $cuitEncontrado = true;
+                } elseif (!$importeEncontrado && $this->validarImporte($dato)) {
+                    $importe = preg_replace('/[^0-9.,$-]/', '', $dato);
+                    // Remover signos negativos
+                    $importe = str_replace('-', '', $importe);
+                    // Agregar el signo de peso al importe
+                    $datosValidados['importe'] = '$' . $importe;
+                    $importeEncontrado = true;
+                } elseif ($dato === 'DEBITO AUTOMATICO') {
+                    $datosValidados['referencia'] = str_pad('DEB AUTOM', 15);
+                    $referenciaEncontrada = true;
+                } elseif ($dato === 'DEBIN') {
+                    $datosValidados['referencia'] = str_pad('DEBIN', 15);
+                    $referenciaEncontrada = true;
+                } elseif ($dato === 'TARJETA DE CREDITO') {
+                    $datosValidados['referencia'] = str_pad('TARJ CREDITO', 15);
+                    $referenciaEncontrada = true;
+                }
+            
+                // Verifica si la referencia no se encontró y la establece en 15 espacios en blanco
+                if (!$referenciaEncontrada) {
+                    $datosValidados['referencia'] = str_repeat(' ', 15);
+                }
+            }
+            
+        
+            // Agrega los datos preestablecidos a cada fila
+            $datosValidados += $datosPreestablecidos;
+        
+            if (!empty($datosValidados)){
+                $datosArchivoActual[] = $datosValidados;
+            // Agrega los datos procesados solo si todos los campos requeridos están presentes
+            if (!$cbuEncontrado) {
+                $camposFaltantes[] = "CBU";
+            }
+
+            if (!$entidadEncontrada) {
+                $camposFaltantes[] = "COD.ENTIDAD";
+            }
+
+            if (!$cuentaSucursalEncontrada) {
+                $camposFaltantes[] = "COD.SUCURSAL";
+            }
+
+            if (!$cuitEncontrado) {
+                $camposFaltantes[] = "CUIT";
+            }
+
+            if (!$importeEncontrado) {
+                $camposFaltantes[] = "IMPORTE";
+            }
+
+            /* if (!$identificacionClienteEncontrada) {
+                $camposFaltantes[] = "IDENTIFICACION CLIENTE";
+            } */
+
+            if(!empty($camposFaltantes)){
+                $datosNoEncontrados[$contadorLinea] = $camposFaltantes;
+            }
+        }
+        }
+
+        $this->datosProcesadosTipo2 = array_merge($this->datosProcesadosTipo2, $datosArchivoActual);
+
+        if(!empty($datosNoEncontrados)){
+            $this->datosFaltantesTipo2 = $datosNoEncontrados;
+            $this->noEncontradosTipo2($this->datosFaltantesTipo2);
+        }
+
+        $this->registrosArchivos[] = [
+            'identificador_tipo2' => $identificadorTipo2,
+            'nombre_archivo' => $this->archivo->getClientOriginalName(),
+            'tipo_registro' => 'Registros tipo 2',
+            'datos' => $datosArchivoActual,
+        ];
+
+        $this->cargando = false;
+        sleep(1);
+
+        $this->datosNoEncontrados = $datosNoEncontrados;
+
+        $this->mostrarDatosTipo2 = true;
+        
+        event(new DatosProcesados($this->datosProcesadosTipo2, $this->registrosArchivos,$this->cargando,$this->datosNoEncontrados,$this->mostrarDatosTipo2));
         }
 
         public function noEncontradosTipo2($datosFaltantes){
