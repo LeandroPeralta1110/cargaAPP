@@ -33,6 +33,7 @@ class DatosProcesados
     public function __construct($datosProcesadosTipo2, $registrosArchivos,$cargando,$datosNoEncontrados,$mostrarDatosTipo2)
     {
         $this->datosProcesadosTipo2 = $datosProcesadosTipo2;
+        dd($this->datosProcesadosTipo2);
         $this->registrosArchivos = $registrosArchivos;
         $this->cargando = $cargando;
         $this->datosNoEncontrados = $datosNoEncontrados;
