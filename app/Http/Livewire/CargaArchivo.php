@@ -525,7 +525,6 @@ public function cargaArchivoTipo1()
 
         $this->mostrarDatosTipo2 = true;
         
-        event(new DatosProcesados($this->datosProcesadosTipo2, $this->registrosArchivos,$this->cargando,$this->datosNoEncontrados,$this->mostrarDatosTipo2));
         }
 
         public function noEncontradosTipo2($datosFaltantes){
@@ -542,7 +541,6 @@ public function cargaArchivoTipo1()
         public function mostrarDatosProcesados($datosProcesadosTipo2, $registrosArchivos, $cargando, $datosNoEncontrados)
         {
             $this->datosProcesadosTipo2 = $datosProcesadosTipo2;
-            dd($this->datosProcesadosTipo2);
             $this->registrosArchivos = $registrosArchivos;
             $this->cargando = $cargando;
             $this->datosNoEncontrados = $datosNoEncontrados;
