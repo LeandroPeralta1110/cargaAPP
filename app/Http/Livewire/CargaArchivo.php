@@ -265,7 +265,6 @@ public function cargaArchivoTipo1()
             if ($this->validarCBU($dato)) {
                 $datosValidados['cbu'] = $dato;
                 $cbuEncontrado = true;
-                $cuentaSucursalEncontrada = true;
                 // Divide el CBU en entidad y sucursal
                 $entidad = substr($dato, 4, 3);
                 $datosValidados['entidad_acreditar'] = $entidad;
@@ -333,6 +332,7 @@ public function cargaArchivoTipo1()
             if(!empty($camposFaltantes)){
                 $datosNoEncontrados[$contadorLinea] = $camposFaltantes;
             }
+            dd($datosNoEncontrados);
         }
                 $contadorRegistrosTipo1++;
             }
@@ -835,13 +835,12 @@ public function datosNoEncontrados(){
         if ($this->seccionSeleccionada === 'registro_tipo_1' && count($this->datosProcesadosTipo1) > 0) {
             // Verifica que todos los campos necesarios estén presentes en al menos una fila
             $camposNecesarios = [
-                'cuit',
-                'entidad_acreditar',
                 'cbu',
+                'entidad_acreditar',
+                'cuit',
                 'moneda',
                 'fecha_pago',
                 'info_criterio_empresa',
-                'clase_pagos',
                 'codigo_convenio',
                 'numero_envio',
             ];
