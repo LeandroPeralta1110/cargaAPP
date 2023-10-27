@@ -7,7 +7,7 @@
 
         <title>Vortex</title>
 
-        <link rel="icon" href="{{ asset('./images/tornado-icon.jpg') }}" type="image/x-icon"">
+        <link rel="icon" href="{{ asset('./images/agualogo.jpg') }}" type="image/x-icon">
         <link href="{{ asset('build/assets/app.css') }}" rel="stylesheet">
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">

@@ -19,7 +19,7 @@ class CargaArchivo extends Component
 {
     use WithFileUploads;
 
-    protected $listeners = ['DatosProcesados' => 'mostrarDatosProcesados'];
+    protected $listeners = ['datosTipo2Cargados' => 'cargaArchivoTipo3'];
 
     protected $identificador;
 
@@ -297,6 +297,8 @@ public function cargaArchivoTipo1()
             }
         }
 
+        $datosValidados += $datosPreestablecidos;
+
         // Agrega los datos procesados solo si todos los campos requeridos están presentes
         if (!empty($datosValidados)){
             $datosArchivoActual[] = $datosValidados;
@@ -524,6 +526,8 @@ public function cargaArchivoTipo1()
         $this->datosNoEncontrados = $datosNoEncontrados;
 
         $this->mostrarDatosTipo2 = true;
+
+        $this->emit('datosTipo2Cargados', $this->totalImporteTipo2, $contadorRegistrosTipo2);
         
         }
 
