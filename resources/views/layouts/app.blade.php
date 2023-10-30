@@ -40,7 +40,25 @@
         @livewireScripts
         <script src="{{ asset('build/assets/app.js') }}"></script>
         <script>
+            // Texto original que quieres animar
+            const textoOriginal = "Vortex-Data (Procesador de Archivos)";
             
+            // Elemento del título
+            const titulo = document.getElementById("animated-title");
+            
+            let indice = 0;
+            
+            const intervalo = setInterval(function () {
+                // Agrega la siguiente letra al título
+                titulo.textContent = textoOriginal.slice(0, indice);
+                indice++;
+            
+                // Detén la animación cuando hayas mostrado todo el texto
+                if (indice > textoOriginal.length) {
+                    clearInterval(intervalo);
+                }
+            }, 100); // Ajusta el intervalo según la velocidad deseada
+
             // JavaScript para mostrar el pie de página cuando se desplaza el contenido
             window.addEventListener('scroll', function() {
                 var footer = document.getElementById('footer');

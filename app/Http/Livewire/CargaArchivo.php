@@ -14,13 +14,17 @@ use App\Jobs\ProcesarArchivoJob;
 use App\Listeners\ProcesarDatosProcesados;
 use App\Events\DatosProcesados;
 use Illuminate\Queue\Listener;
+use Carbon\Carbon;
 
 class CargaArchivo extends Component
 {
     use WithFileUploads;
 
-    protected $listeners = ['datosTipo2Cargados' => 'cargaArchivoTipo3'];
-
+    protected $listeners = [
+        'datosTipo2Cargados' => 'cargaArchivoTipo3',
+        'archivoCargadoTipo1' => 'cargaArchivoTipo1',
+        'archivoCargadoTipo2' => 'cargaArchivoTipo2',
+    ];
     protected $identificador;
 
     public $datosAltaProveedor = [];
@@ -58,6 +62,9 @@ class CargaArchivo extends Component
     public $popupMessageAltaProveedor = [];
     public $cargando = false;
     public $datosArchivoActual = [];
+    public $archivoCargado;
+    public $identificadorUnico;
+    public $params;
 
     public $ultimoArchivo = [];
     public $cantidadDatos = 0; 
@@ -94,13 +101,17 @@ class CargaArchivo extends Component
     
         $contenido = file_get_contents($this->archivo->getRealPath());
         $lineas = explode("\n", $contenido);
-    
+        $identificadorUnico = uniqid();
+
+        if (isset($lineas[0])) {
+            $encabezado = $lineas[0];
+            unset($lineas[0]);
+        }
+
         $contadorRegistrosAltaProveedor = 0;
-        $contadorLinea = 0;
     
-        foreach ($lineas as $linea) {
-            // Incrementa el contador de línea
-            $contadorLinea++;
+        for ($contadorLinea = 1; $contadorLinea < count($lineas); $contadorLinea++) {
+            $linea = $lineas[$contadorLinea];
     
             // Dividir la línea en elementos usando el punto y coma como separador
             $datos = str_getcsv($linea, ';');
@@ -121,7 +132,7 @@ class CargaArchivo extends Component
             $datosValidados = [
                 'titulares' => '1',
             ];
-    
+
             foreach ($datos as $key => $dato) {
                 // Realiza la validación específica para cada tipo de dato
                 // CBU
@@ -200,6 +211,14 @@ class CargaArchivo extends Component
         $this->mostrarDatosAltaProveedor = true;
     
         $this->emit('datosAltaProveedorCargados', count($datosArchivoActual));
+
+        $this->archivoCargado = $this->archivo;
+
+        $this->identificadorUnico = $identificadorUnico;
+
+        $this->emit('archivoCargadoTipo1', ['archivo' => $this->archivo, 'id' => $identificadorUnico]);
+        $this->emit('archivoCargadoTipo2', ['archivo' => $this->archivo, 'id' => $identificadorUnico]);
+
     
         if (!empty($datosNoEncontrados)) {
             $this->popupMessage = 'Datos no encontrados:<br>';
@@ -210,7 +229,7 @@ class CargaArchivo extends Component
         }
     }    
 
-public function cargaArchivoTipo1()
+public function cargaArchivoTipo1($params = null)
 {
     $this->validate([
         'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
@@ -220,17 +239,57 @@ public function cargaArchivoTipo1()
     $datosArchivoActual = [];
 
     $contenido = file_get_contents($this->archivo->getRealPath());
+    // Verifica si $params está presente
+    if (!empty($params) && isset($params['id'])) {
+        $identificadorUnico = $params['id'];
+    } else {
+        $identificadorUnico = null; // Otra acción si no se proporciona $params
+    }
     $lineas = explode("\n", $contenido);
 
-    $contadorRegistrosTipo1 = 0;
-    $contadorLinea = 0;
+    if (isset($lineas[0])) {
+        $encabezado = $lineas[0];
+        unset($lineas[0]);
+    }
 
-    foreach ($lineas as $linea) {
+    $contadorRegistrosTipo1 = 0;
+
+    for ($contadorLinea = 1; $contadorLinea < count($lineas); $contadorLinea++) {
+        $linea = $lineas[$contadorLinea];
         // Incrementa el contador de línea
-        $contadorLinea++;
 
         // Dividir la línea en elementos usando el punto y coma como separador
         $datos = str_getcsv($linea, ';');
+
+        // Establecer la localización a español
+        Carbon::setLocale('es');
+
+        // Array de traducción de nombres de meses
+        $mesesEnEspanol = [
+            'January' => 'ENERO',
+            'February' => 'FEBRERO',
+            'March' => 'MARZO',
+            'April' => 'ABRIL',
+            'May' => 'MAYO',
+            'June' => 'JUNIO',
+            'July' => 'JULIO',
+            'August' => 'AGOSTO',
+            'September' => 'SEPTIEMBRE',
+            'October' => 'OCTUBRE',
+            'November' => 'NOVIEMBRE',
+            'December' => 'DICIEMBRE',
+        ];
+
+        // Obtener el nombre del mes actual en mayúsculas
+        $nombreMesActual = strtoupper($mesesEnEspanol[Carbon::now()->format('F')]);
+
+        // Crear la cadena 'info_criterio_empresa' con un máximo de 20 caracteres
+        $infoCriterioEmpresa = 'PAGO PROVEED ' . substr($nombreMesActual, 0, 9); // Recortar a 9 caracteres si es necesario
+
+        // Asegurarse de que 'info_criterio_empresa' tenga una longitud máxima de 20 caracteres
+        if (strlen($infoCriterioEmpresa) > 20) {
+            $infoCriterioEmpresa = substr($infoCriterioEmpresa, 0, 20);
+        }
 
         // Inicializa datos preestablecidos con ceros
         $datosPreestablecidos = [
@@ -244,6 +303,9 @@ public function cargaArchivoTipo1()
 
         $datosValidados = [
             'tipo_registro' => '1',
+            'moneda'=> '0',
+            'fecha_pago' => date("d/m/Y"),
+            'info_criterio_empresa' => $infoCriterioEmpresa,
         ];
 
         $cbuEncontrado = false;
@@ -271,23 +333,13 @@ public function cargaArchivoTipo1()
             } elseif ($this->validarCUIT($dato)) {
                 $datosValidados['cuit'] = $dato;
                 $cuitEncontrado = true;
-            }if ($monedaEncontrada === false && ($dato === '0' || $dato === '1')) {
-                $datosValidados['moneda'] = $dato;
-                $monedaEncontrada = true;
             } elseif ($numeroEnvioEncontrado === false && ($dato === '1' || $dato === '2')) {
                 $datosValidados['numero_envio'] = $dato;
                 $numeroEnvioEncontrado = true;
-            } elseif (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $dato)) {
-                $datosValidados['fecha_pago'] = $dato;
-                $fechaPagoEncontrada = true;
             } elseif (preg_match('/^\d{4}$|^\d{8}$/', $dato)) {
                 // Si $dato contiene solo números, asignarlo a $codConvenio
                 $datosValidados['codigo_convenio'] = $dato;
                 $codigoConvenioEncontrado = true;
-            } elseif (preg_match('/^[a-zA-Z\s]+$/', $dato)) {
-                // Si $dato contiene solo letras y espacios, asignarlo a $infoCriterioEmpresa
-                $datosValidados['info_criterio_empresa'] = $dato;
-                $infoCriterioEmpresaEncontrada = true;
             } elseif (preg_match('/^[12]$/', $dato)) {
                 if ($contadorNumeroEnvio == 0) {
                     $datosValidados['numero_envio'] = $dato;
@@ -295,9 +347,15 @@ public function cargaArchivoTipo1()
                     $contadorNumeroEnvio++;
                 }
             }
-        }
-
+            // Verifica si $identificadorUnico está presente
+            if (is_null($identificadorUnico) && !empty($params) && isset($params['id'])) {
+                $datosValidados['identificador_alta_proveedores'] = $identificadorUnico;
+            } elseif (is_null($identificadorUnico)) {
+                $datosValidados['identificador_alta_proveedores'] = null;
+            }
+    }
         $datosValidados += $datosPreestablecidos;
+
 
         // Agrega los datos procesados solo si todos los campos requeridos están presentes
         if (!empty($datosValidados)){
@@ -334,7 +392,6 @@ public function cargaArchivoTipo1()
             if(!empty($camposFaltantes)){
                 $datosNoEncontrados[$contadorLinea] = $camposFaltantes;
             }
-            dd($datosNoEncontrados);
         }
                 $contadorRegistrosTipo1++;
             }
@@ -370,31 +427,41 @@ public function cargaArchivoTipo1()
             }
         }
 
-        public function cargaArchivoTipo2()
+        public function cargaArchivoTipo2($params = null)
         {
             $this->validate([
                 'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
             ]);
             $this->cargando = true;
 
-        // Ahora puedes cargar el contenido del archivo desde la ruta
-        $contenido = file_get_contents($this->archivo->getRealPath());
-      
-        $datosNoEncontrados = [];
-        $datosArchivoActual = [];
+            // Ahora puedes cargar el contenido del archivo desde la ruta
+            $contenido = file_get_contents($this->archivo->getRealPath());
 
-        $lineas = explode("\n", $contenido);
-
-        $identificadorTipo2 = uniqid();
-        $this->identificadorTipo2 = $identificadorTipo2;
-
-        $contadorRegistrosTipo2 = 0;
-        $contadorLinea = 0;
-
-        foreach ($lineas as $linea) {
-            // Incrementa el contador de línea
-            $contadorLinea++;
+            if (!empty($params) && isset($params['id'])) {
+                $identificadorUnico = $params['id'];
+            } else {
+                $identificadorUnico = null; // Otra acción si no se proporciona $params
+            }
         
+            $datosNoEncontrados = [];
+            $datosArchivoActual = [];
+
+            $lineas = explode("\n", $contenido);
+
+            if (isset($lineas[0])) {
+                $encabezado = $lineas[0];
+                unset($lineas[0]);
+            }
+
+            $identificadorTipo2 = uniqid();
+            $this->identificadorTipo2 = $identificadorTipo2;
+
+            $contadorRegistrosTipo2 = 0;
+
+            // Comienza a leer desde la segunda línea (índice 1)
+            for ($contadorLinea = 1; $contadorLinea < count($lineas); $contadorLinea++) {
+                $linea = $lineas[$contadorLinea];
+                
             // Dividir la línea en elementos usando el punto y coma como separador
             $datos = str_getcsv($linea, ';');
         
@@ -467,9 +534,14 @@ public function cargaArchivoTipo1()
                 if (!$referenciaEncontrada) {
                     $datosValidados['referencia'] = str_repeat(' ', 15);
                 }
+                // Verifica si $identificadorUnico está presente
+                if (is_null($identificadorUnico) && !empty($params) && isset($params['id'])) {
+                    $datosValidados['identificador_alta_proveedores'] = $identificadorUnico;
+                } elseif (is_null($identificadorUnico)) {
+                    $datosValidados['identificador_alta_proveedores'] = null;
+                }
             }
             
-        
             // Agrega los datos preestablecidos a cada fila
             $datosValidados += $datosPreestablecidos;
         
@@ -1297,7 +1369,7 @@ public function descargarDatosRegistroTipo3()
         $this->pagina--;
     }
 
-    public function eliminarUltimosDatos()
+    public function eliminarUltimosDatos($identificadorUnico)
 {
     // Busca el último archivo de "Alta Proveedores" en la lista de registrosArchivos
     $ultimoIndice = $this->findLastIndexByTipoRegistro('Alta Proveedores');
@@ -1314,6 +1386,9 @@ public function descargarDatosRegistroTipo3()
                 unset($this->datosAltaProveedor[$index]);
             }
         }
+
+        $this->eliminarUltimoArchivoTipo1($identificadorUnico);
+        $this->eliminarUltimosDatosTipo2($identificadorUnico);
 
         // Limpia los elementos eliminados
         $this->datosAltaProveedor = array_values($this->datosAltaProveedor);

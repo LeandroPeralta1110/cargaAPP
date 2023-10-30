@@ -21,7 +21,7 @@
     <!-- Aquí va el contenido principal -->
 
     @if($registrosArchivos)
-    <div class="mr-3 w-2/12 p-4 bg-gray-200 rounded-2xl" style="position: absolute; right: 0; top: 56%; height: 300px;">
+    <div class="mr-3 w-2/12 p-4 bg-gray-200 rounded-2xl" style="position: absolute; right: 0; top: 48%; height: 600px;">
         <div class="bg-gray-200 px-4 py-3 rounded-md">
             <h2 class="text-lg font-semibold">Archivos Registrados:</h2>
         </div>
@@ -135,6 +135,20 @@
     @endif
     @endif
 
+    <div>
+        @if (!empty($datosDuplicados))
+            <!-- Aquí puedes diseñar el popup emergente para mostrar los datos duplicados -->
+            <div class="mr-3 w-2/12 p-4 bg-gray-200 rounded-2xl" style="position: absolute; right: 0; top: 18%; height: 200px;">
+                <h2>Datos Duplicados</h2>
+                <ul>
+                    @foreach ($datosDuplicados as $duplicado)
+                        <li>Fila: {{ $duplicado['fila'] }}, Número de Comprobante: {{ $duplicado['numeroComprobante'] }}, Referencia: {{ $duplicado['referencia'] }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+    </div>
+
     <div class="w-full max-w-screen-lg p-6">
             
             {{-- <!-- Botón para la sección "Archivo de Pago" -->
@@ -192,6 +206,15 @@
                             <p class="text-white text-sm font-medium text-gray-600">
                                 {{ count($datosProcesadosTipo1) }} Datos encontrados
                             </p>
+
+                            @php
+                            $paginaActual = floor(($desde / 6) + 1);
+                            $totalPaginas = ceil($total / $porPagina);
+                        @endphp
+                        
+                        <p class="text-white text-sm font-medium text-gray-600">
+                            Página {{ $paginaActual }} de {{ $totalPaginas }}
+                        </p>
                             <div class="flex">
                                 <div class="p-2 flex items-center">
                                     <button>
@@ -364,7 +387,16 @@
                         x-data="{ isOpen: false }">
                         @if ($mostrarDatosTipo2)
                             <p class="text-white text-sm font-medium text-gray-600">
-                                {{ count($datosProcesadosTipo2) }} Datos encontrados
+                                {{ count($datosProcesadosTipo2)}} Datos encontrados
+                            </p>
+
+                            @php
+                                $paginaActual = floor(($desde / 6) + 1);
+                                $totalPaginas = ceil($total / $porPagina);
+                            @endphp
+                            
+                            <p class="text-white text-sm font-medium text-gray-600">
+                                Página {{ $paginaActual }} de {{ $totalPaginas }}
                             </p>
                             <div class="flex">
                                 <div class="p-2 flex items-center">
@@ -524,6 +556,15 @@
                         @if ($mostrarDatosTipo3)
                             <p class="text-white text-sm font-medium text-gray-600">
                                 {{ count($datosProcesadosTipo3) }} Datos encontrados
+                            </p>
+
+                            @php
+                                $paginaActual = floor(($desde / 6) + 1);
+                                $totalPaginas = ceil($total / $porPagina);
+                            @endphp
+                            
+                            <p class="text-white text-sm font-medium text-gray-600">
+                                Página {{ $paginaActual }} de {{ $totalPaginas }}
                             </p>
                             <div class="p-2">
                                 <button>
@@ -696,6 +737,14 @@
                                 <p class="text-white text-sm font-medium text-gray-600">
                                     {{ count($datosAltaProveedor) }} Datos encontrados
                                 </p>
+                                @php
+                                $paginaActual = floor(($desde / 6) + 1);
+                                $totalPaginas = ceil($total / $porPagina);
+                                @endphp
+                                
+                                <p class="text-white text-sm font-medium text-gray-600">
+                                    Página {{ $paginaActual }} de {{ $totalPaginas }}
+                                </p>
                                 <div class="flex">
                                     <div class="p-2 flex items-center">
                                         <button>
@@ -705,7 +754,7 @@
                                         </button>
                                     </div>
                                     <div class="p-2">
-                                        <form wire:submit.prevent="eliminarUltimosDatos">
+                                        <form wire:submit.prevent="eliminarUltimosDatos('{{ $identificadorUnico }}')">
                                             <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md">
                                                 Volver
                                             </button>

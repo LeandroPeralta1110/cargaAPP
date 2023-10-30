@@ -5,7 +5,7 @@
 
         <div class="ml-2">
             <a href="#" onclick="location.reload(); return false;" class="no-underline">
-                <h1 class="text-3xl font-semibold text-indigo-600 pl-5">Vortex-Data (Procesador de Archivos)</h1>
+                <h1 id="animated-title" class="text-3xl font-semibold text-indigo-600 pl-16"></h1>
             </a>
         </div>
     </header>
