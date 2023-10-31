@@ -91,7 +91,7 @@ class CargaArchivo extends Component
     public $pagina = 1; // Página actual
 
     //secciones para el tipo de pago, predefinido alta proveedores
-    public $seccionSeleccionada = "registro_tipo_2";
+    public $seccionSeleccionada = "alta_proveedor";
 
     public function procesarArchivosAltaProveedores()
     {
