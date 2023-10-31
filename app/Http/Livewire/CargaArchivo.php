@@ -288,7 +288,7 @@ class CargaArchivo extends Component
         }
     }    
 
-public function cargaArchivoTipo1($params = null,$archivoOriginalSinDuplicados)
+public function cargaArchivoTipo1($params = null,$archivoOriginalSinDuplicados = null)
 {
     $this->validate([
         'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
@@ -305,7 +305,6 @@ public function cargaArchivoTipo1($params = null,$archivoOriginalSinDuplicados)
     } else {
         $identificadorUnico = null; // Otra acción si no se proporciona $params
     }
-
 
     $lineas = explode("\n", $contenido);
 
@@ -488,7 +487,7 @@ public function cargaArchivoTipo1($params = null,$archivoOriginalSinDuplicados)
             }
         }
 
-        public function cargaArchivoTipo2($params = null,$archivoOriginalSinDuplicados)
+        public function cargaArchivoTipo2($params = null,$archivoOriginalSinDuplicados = null)
         {
             $this->validate([
                 'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
@@ -1483,18 +1482,17 @@ public function descargarDatosRegistroTipo3()
     
             // Limpia los elementos eliminados
             $this->datosAltaProveedor = array_values($this->datosAltaProveedor);
+
+            // Obtén el identificador del archivo que se eliminará
+            $identificadorArchivoAEliminar = $this->registrosArchivos[$ultimoIndice]['identificadorUnico'];
     
-            $ultimosRegistrosDuplicados = $this->datosDuplicados['identificador_duplicados'];
-            
+             // Elimina los registros duplicados vinculados al identificador de archivo que se eliminará
             if (!empty($this->datosDuplicados)) {
-                // Elimina los registros del último archivo de "Alta Proveedores" de la lista de datosAltaProveedor
-            foreach ($ultimosRegistrosDuplicados as $registro) {
-                $index = array_search($registro, $this->datosDuplicados);
-                if ($index !== false) {
-                    unset($this->datosDuplicados[$index]);
-                }
+                $this->datosDuplicados = array_filter($this->datosDuplicados, function ($duplicado) use ($identificadorArchivoAEliminar) {
+                    return $duplicado['identificador_duplicados'] !== $identificadorArchivoAEliminar;
+                });
             }
-            }
+
             // Elimina el último archivo de "Alta Proveedores" de la lista de registrosArchivos
             unset($this->registrosArchivos[$ultimoIndice]);
             $this->registrosArchivos = array_values($this->registrosArchivos);
