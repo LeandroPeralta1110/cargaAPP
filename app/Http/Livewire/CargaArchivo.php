@@ -65,6 +65,8 @@ class CargaArchivo extends Component
     public $archivoCargado;
     public $identificadorUnico;
     public $params;
+    public $datosDuplicados= [];
+    public $archivoAltaProveedores = [];
 
     public $ultimoArchivo = [];
     public $cantidadDatos = 0; 
@@ -82,6 +84,7 @@ class CargaArchivo extends Component
     public $mostrarDatosTipo2 = false;
     public $mostrarDatosTipo3 = false;
     public $cargandoDatosTipo1 = false;
+    public $archivoCargadoDesdeAltaProveedores = false;
 
     public $datos = []; // Array para almacenar los datos procesados
     public $porPagina = 6; // Número de elementos por página
@@ -98,6 +101,8 @@ class CargaArchivo extends Component
     
         $datosNoEncontrados = [];
         $datosArchivoActual = [];
+        $filasProcesadas = [];
+        $datosDuplicados = [];
     
         $contenido = file_get_contents($this->archivo->getRealPath());
         $lineas = explode("\n", $contenido);
@@ -109,6 +114,7 @@ class CargaArchivo extends Component
         }
 
         $contadorRegistrosAltaProveedor = 0;
+        $datosArchivoOriginal = [];
     
         for ($contadorLinea = 1; $contadorLinea < count($lineas); $contadorLinea++) {
             $linea = $lineas[$contadorLinea];
@@ -124,6 +130,8 @@ class CargaArchivo extends Component
             $tipoCuentaEncontrado = false;
             $referenciaEncontrada = false;
             $emailEncontrado = false;
+            $numeroComprobante = null;
+            $num_fac = null;
     
             // Arreglo para los datos validados
             $datosValidados = [];
@@ -163,6 +171,16 @@ class CargaArchivo extends Component
                     $email = str_pad($email, 50, ' ', STR_PAD_RIGHT);
                     $datosValidados['email'] = $email;
                     $emailEncontrado = true;
+                }if (preg_match('/^\d{5}$/', $dato)) {
+                    // Este dato parece ser el número de comprobante (5 dígitos)
+                    if ($numeroComprobante === null) {
+                        $numeroComprobante = $dato;
+                    }
+                } elseif (preg_match('/^FC [A-Z] [A-Z0-9]+\-[A-Z0-9]+$/', $dato)) {
+                    // Esto parece ser la referencia (ejemplo: 'FC C 00003-00000374')
+                    if ($num_fac === null) {
+                        $num_fac = $dato;
+                    }
                 }
 
                 if (!$emailEncontrado) {
@@ -173,9 +191,27 @@ class CargaArchivo extends Component
                     $datosValidados['referencia'] = str_repeat(' ', 30);
                 }
             }
-                
+
+        $existeDuplicado = $this->existeDuplicado($numeroComprobante, $num_fac, $filasProcesadas);
+
+        if ($existeDuplicado) {
+            // Agrega información adicional al registro de duplicados
+            $this->notificarDuplicado($contadorLinea, $numeroComprobante, $num_fac, $datosDuplicados, $identificadorUnico);
+        } else {
+            // No es un duplicado, agrega esta fila a las filas procesadas
+            $filasProcesadas[] = [
+                'contadorLinea' => $contadorLinea,
+                'numeroComprobante' => $numeroComprobante,
+                'num_fac' => $num_fac,
+                'identificador_duplicados' => $identificadorUnico, // Vincula el identificador único del archivo
+            ];
+            $datosValidados['num_fac'] = $num_fac;
+            
+            $datosArchivoOriginal[] = $datos;
+
+            // Agrega los datos preestablecidos a cada fila
             // Verifica si todos los campos requeridos se encontraron
-            if (!empty($datosValidados)){
+
                 $datosArchivoActual[] = $datosValidados;
 
                 if (!$cbuEncontrado) {
@@ -199,12 +235,33 @@ class CargaArchivo extends Component
             }
             $contadorRegistrosAltaProveedor++;
         }
+
+        $this->datosDuplicados = array_merge($this->datosDuplicados, $datosDuplicados);
+       
+        $archivoOriginalSinDuplicados = tempnam(sys_get_temp_dir(), 'original_');
+        
+        if (!empty($datosArchivoOriginal)) {
+            $datosArchivoTexto = [];
+            foreach ($datosArchivoOriginal as $datosFila) {
+                $datosArchivoTexto[] = implode(';', $datosFila);
+            }
+
+            $contenidoArchivoTexto = $encabezado . "\n" . implode("\n", $datosArchivoTexto);
+            $contenidoArchivoTexto = rtrim($contenidoArchivoTexto) . "\n";
+        } else {
+            // Si no hay datos, simplemente guarda el encabezado
+            file_put_contents($archivoOriginalSinDuplicados, $encabezado);
+        }
+
+        $this->archivoAltaProveedores = $archivoOriginalSinDuplicados;
+
         $this->datosAltaProveedor = array_merge($this->datosAltaProveedor, $datosArchivoActual);
         $this->datosNoEncontradosAltaProveedor = $datosNoEncontrados;
-    
+        
         $this->registrosArchivos[] = [
             'nombre_archivo' => $this->archivo->getClientOriginalName(),
             'tipo_registro' => 'Alta Proveedores',
+            'identificadorUnico' => $identificadorUnico, // Vincula el identificador único del archivo
             'datos' => $datosArchivoActual,
         ];
     
@@ -216,8 +273,10 @@ class CargaArchivo extends Component
 
         $this->identificadorUnico = $identificadorUnico;
 
-        $this->emit('archivoCargadoTipo1', ['archivo' => $this->archivo, 'id' => $identificadorUnico]);
-        $this->emit('archivoCargadoTipo2', ['archivo' => $this->archivo, 'id' => $identificadorUnico]);
+        $this->archivoCargadoDesdeAltaProveedores = true;
+        // Llama a cargaArchivoTipo1 pasando el archivo original sin duplicados
+        $this->cargaArchivoTipo1($identificadorUnico, $contenidoArchivoTexto);
+        $this->cargaArchivoTipo2($identificadorUnico, $contenidoArchivoTexto);
 
     
         if (!empty($datosNoEncontrados)) {
@@ -229,7 +288,7 @@ class CargaArchivo extends Component
         }
     }    
 
-public function cargaArchivoTipo1($params = null)
+public function cargaArchivoTipo1($params = null,$archivoOriginalSinDuplicados)
 {
     $this->validate([
         'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
@@ -238,13 +297,16 @@ public function cargaArchivoTipo1($params = null)
     $datosNoEncontrados = [];
     $datosArchivoActual = [];
 
-    $contenido = file_get_contents($this->archivo->getRealPath());
+    $contenido = $this->archivoCargadoDesdeAltaProveedores ? $archivoOriginalSinDuplicados : file_get_contents($this->archivo->getRealPath());
+
     // Verifica si $params está presente
     if (!empty($params) && isset($params['id'])) {
         $identificadorUnico = $params['id'];
     } else {
         $identificadorUnico = null; // Otra acción si no se proporciona $params
     }
+
+
     $lineas = explode("\n", $contenido);
 
     if (isset($lineas[0])) {
@@ -414,7 +476,6 @@ public function cargaArchivoTipo1($params = null)
             $this->emit('datosTipo1Cargados', count($datosArchivoActual));
 
             $this->datosNoEncontrados = $datosNoEncontrados;
-
         }
 
         public function datosNoEncontradosTipo1($datosfaltantes){
@@ -427,15 +488,14 @@ public function cargaArchivoTipo1($params = null)
             }
         }
 
-        public function cargaArchivoTipo2($params = null)
+        public function cargaArchivoTipo2($params = null,$archivoOriginalSinDuplicados)
         {
             $this->validate([
                 'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
             ]);
             $this->cargando = true;
 
-            // Ahora puedes cargar el contenido del archivo desde la ruta
-            $contenido = file_get_contents($this->archivo->getRealPath());
+            $contenido = $this->archivoCargadoDesdeAltaProveedores ? $archivoOriginalSinDuplicados : file_get_contents($this->archivo->getRealPath());
 
             if (!empty($params) && isset($params['id'])) {
                 $identificadorUnico = $params['id'];
@@ -445,6 +505,7 @@ public function cargaArchivoTipo1($params = null)
         
             $datosNoEncontrados = [];
             $datosArchivoActual = [];
+            $filasProcesadas = [];
 
             $lineas = explode("\n", $contenido);
 
@@ -496,6 +557,8 @@ public function cargaArchivoTipo1($params = null)
             $referenciaEncontrada = false;
             $identificacionClienteEncontrada = false;
             $camposFaltantes = [];
+            $numeroComprobante = null;
+            $referencia = null;
         
             foreach ($datos as $key => $dato) {
                 // Realiza la validación específica para cada tipo de dato
@@ -519,15 +582,6 @@ public function cargaArchivoTipo1($params = null)
                     // Agregar el signo de peso al importe
                     $datosValidados['importe'] = '$' . $importe;
                     $importeEncontrado = true;
-                } elseif ($dato === 'DEBITO AUTOMATICO') {
-                    $datosValidados['referencia'] = str_pad('DEB AUTOM', 15);
-                    $referenciaEncontrada = true;
-                } elseif ($dato === 'DEBIN') {
-                    $datosValidados['referencia'] = str_pad('DEBIN', 15);
-                    $referenciaEncontrada = true;
-                } elseif ($dato === 'TARJETA DE CREDITO') {
-                    $datosValidados['referencia'] = str_pad('TARJ CREDITO', 15);
-                    $referenciaEncontrada = true;
                 }
             
                 // Verifica si la referencia no se encontró y la establece en 15 espacios en blanco
@@ -541,7 +595,21 @@ public function cargaArchivoTipo1($params = null)
                     $datosValidados['identificador_alta_proveedores'] = null;
                 }
             }
-            
+
+            $existeDuplicado = $this->existeDuplicado($numeroComprobante, $referencia, $filasProcesadas);
+
+        if ($existeDuplicado) {
+            // Llamar a la función notificarDuplicado si es un duplicado
+            $this->notificarDuplicado($contadorLinea, $numeroComprobante, $referencia, $datosDuplicados,$identificadorUnico);
+        } else {
+            // No es un duplicado, agrega esta fila a las filas procesadas
+            $filasProcesadas[] = [
+                'numeroComprobante' => $numeroComprobante,
+                'num_fac' => '',
+            ];
+
+            $datosValidados['referencia'] = $referencia;
+
             // Agrega los datos preestablecidos a cada fila
             $datosValidados += $datosPreestablecidos;
         
@@ -577,6 +645,7 @@ public function cargaArchivoTipo1($params = null)
             }
         }
         }
+    }
 
         $this->datosProcesadosTipo2 = array_merge($this->datosProcesadosTipo2, $datosArchivoActual);
 
@@ -620,6 +689,28 @@ public function cargaArchivoTipo1($params = null)
             $this->registrosArchivos = $registrosArchivos;
             $this->cargando = $cargando;
             $this->datosNoEncontrados = $datosNoEncontrados;
+        }
+
+        private function existeDuplicado($numeroComprobante, $num_fac, $filasProcesadas)
+        {
+            foreach ($filasProcesadas as $fila) {
+                if ($fila['numeroComprobante'] === $numeroComprobante && $fila['num_fac'] === $num_fac) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private function notificarDuplicado($contadorLinea, $numeroComprobante, $num_fac, &$datosDuplicados,$identificadorUnico)
+        {
+            // Almacena información sobre las filas duplicadas
+            $datosDuplicados[] = [
+                'contadorLinea' => $contadorLinea,
+                'numeroComprobante' => $numeroComprobante,
+                'num_fac' => $num_fac,
+                'identificador_duplicados' => $identificadorUnico, 
+            ];
         }
 
 private function validarEntidad($dato)
@@ -1370,38 +1461,51 @@ public function descargarDatosRegistroTipo3()
     }
 
     public function eliminarUltimosDatos($identificadorUnico)
-{
-    // Busca el último archivo de "Alta Proveedores" en la lista de registrosArchivos
-    $ultimoIndice = $this->findLastIndexByTipoRegistro('Alta Proveedores');
-
-    // Verifica si se encontró el último archivo
-    if ($ultimoIndice !== null) {
-        // Obtiene los datos del último archivo de "Alta Proveedores"
-        $ultimosRegistros = $this->registrosArchivos[$ultimoIndice]['datos'];
-
-        // Elimina los registros del último archivo de "Alta Proveedores" de la lista de datosAltaProveedor
-        foreach ($ultimosRegistros as $registro) {
-            $index = array_search($registro, $this->datosAltaProveedor);
-            if ($index !== false) {
-                unset($this->datosAltaProveedor[$index]);
+    {
+        // Busca el último archivo de "Alta Proveedores" en la lista de registrosArchivos
+        $ultimoIndice = $this->findLastIndexByTipoRegistro('Alta Proveedores');
+    
+        // Verifica si se encontró el último archivo
+        if ($ultimoIndice !== null) {
+            // Obtiene los datos del último archivo de "Alta Proveedores"
+            $ultimosRegistros = $this->registrosArchivos[$ultimoIndice]['datos'];
+    
+            // Elimina los registros del último archivo de "Alta Proveedores" de la lista de datosAltaProveedor
+            foreach ($ultimosRegistros as $registro) {
+                $index = array_search($registro, $this->datosAltaProveedor);
+                if ($index !== false) {
+                    unset($this->datosAltaProveedor[$index]);
+                }
             }
+    
+            $this->eliminarUltimoArchivoTipo1($identificadorUnico);
+            $this->eliminarUltimosDatosTipo2($identificadorUnico);
+    
+            // Limpia los elementos eliminados
+            $this->datosAltaProveedor = array_values($this->datosAltaProveedor);
+    
+            $ultimosRegistrosDuplicados = $this->datosDuplicados['identificador_duplicados'];
+            
+            if (!empty($this->datosDuplicados)) {
+                // Elimina los registros del último archivo de "Alta Proveedores" de la lista de datosAltaProveedor
+            foreach ($ultimosRegistrosDuplicados as $registro) {
+                $index = array_search($registro, $this->datosDuplicados);
+                if ($index !== false) {
+                    unset($this->datosDuplicados[$index]);
+                }
+            }
+            }
+            // Elimina el último archivo de "Alta Proveedores" de la lista de registrosArchivos
+            unset($this->registrosArchivos[$ultimoIndice]);
+            $this->registrosArchivos = array_values($this->registrosArchivos);
+
+            $this->datosDuplicados = array_values($this->datosDuplicados);
+    
+            // Realiza cualquier otra lógica necesaria después de eliminar los registros
+    
+            // Puedes agregar un mensaje de éxito o redireccionar según tus necesidades
         }
-
-        $this->eliminarUltimoArchivoTipo1($identificadorUnico);
-        $this->eliminarUltimosDatosTipo2($identificadorUnico);
-
-        // Limpia los elementos eliminados
-        $this->datosAltaProveedor = array_values($this->datosAltaProveedor);
-
-        // Elimina el último archivo de "Alta Proveedores" de la lista de registrosArchivos
-        unset($this->registrosArchivos[$ultimoIndice]);
-        $this->registrosArchivos = array_values($this->registrosArchivos);
-
-        // Realiza cualquier otra lógica necesaria después de eliminar los registros
-
-        // Puedes agregar un mensaje de éxito o redireccionar según tus necesidades
     }
-}
 
 public function eliminarUltimoArchivoTipo1()
 {

@@ -138,13 +138,16 @@
     <div>
         @if (!empty($datosDuplicados))
             <!-- Aquí puedes diseñar el popup emergente para mostrar los datos duplicados -->
-            <div class="mr-3 w-2/12 p-4 bg-gray-200 rounded-2xl" style="position: absolute; right: 0; top: 18%; height: 200px;">
+            <div class="mr-3 w-2/12 p-4 bg-gray-200 rounded-2xl" style="position: absolute; right: 0; top: 16%; height: 200px;">
                 <h2>Datos Duplicados</h2>
+                <div class="overflow-y-auto" style="height: calc(100% - 50px);"> <!-- 50px de alto para el encabezado -->
                 <ul>
                     @foreach ($datosDuplicados as $duplicado)
-                        <li>Fila: {{ $duplicado['fila'] }}, Número de Comprobante: {{ $duplicado['numeroComprobante'] }}, Referencia: {{ $duplicado['referencia'] }}</li>
+                        <li>Fila: {{ $duplicado['contadorLinea'] }}, Número de Comprobante: {{ $duplicado['numeroComprobante'] }}, Referencia: {{ $duplicado['num_fac'] }}</li>
+                        <hr class="my-4 border-t-2 border-blue-500">
                     @endforeach
                 </ul>
+                </div>
             </div>
         @endif
     </div>
