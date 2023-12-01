@@ -7,6 +7,9 @@
             <a href="#" onclick="location.reload(); return false;" class="no-underline">
                 <h1 id="animated-title" class="text-3xl font-semibold text-indigo-600 pl-16"></h1>
             </a>
+            
+            <a href="{{ route('cargar-archivo') }}" class="ml-4 text-indigo-600 pl-12 underline">Alta Proveedores</a>
+            <a href="{{ route('cobranzas') }}" class="ml-4 text-indigo-600 underline">Cobranzas</a>
         </div>
     </header>
 </div>

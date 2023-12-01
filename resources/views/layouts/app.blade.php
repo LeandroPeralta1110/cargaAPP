@@ -22,6 +22,7 @@
     </head>
     <body class="font-sans antialiased">
         <x-banner />
+        <div class="min-h-screen bg-gray-100  bg-cover bg-center bg-fixed imagenfondo">
         <div class=" bg-gray-100">
             @livewire('navigation-menu')
             
@@ -29,6 +30,7 @@
             <main >
                 {{ $slot }}
             </main>
+            </div>
         </div>
         
         <div id="footer" class="hidden bg-gray-200 text-center py-2">

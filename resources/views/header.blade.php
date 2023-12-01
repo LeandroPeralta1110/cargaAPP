@@ -8,8 +8,8 @@
                 <a href="#" onclick="location.reload(); return false;" class="no-underline">
                     <h1 class="text-3xl font-semibold text-indigo-600 pl-16">Vortex-Data (Procesador de Archivos)</h1>
                 </a>
+
             </div>
         </header>
     </div>
-    
 </div>

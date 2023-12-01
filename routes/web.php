@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Livewire\CargaArchivo;
+use App\Http\Livewire\Cobranzas;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,3 +17,5 @@ use App\Http\Livewire\CargaArchivo;
 */
 
 Route::get('/', CargaArchivo::class)->name('cargar-archivo');
+
+route::get('/cobranzas', Cobranzas::class)->name('cobranzas');

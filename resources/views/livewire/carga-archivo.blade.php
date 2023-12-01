@@ -21,7 +21,7 @@
     <!-- Aquí va el contenido principal -->
 
     @if($registrosArchivos)
-    <div class="mr-3 w-2/12 p-4 bg-gray-200 rounded-2xl" style="position: absolute; right: 0; top: 48%; height: 600px;">
+    <div class="mr-3 w-2/12 p-4 bg-gray-200 rounded-2xl" style="position: absolute; right: 0; top: 48%; height: 500px;">
         <div class="bg-gray-200 px-4 py-3 rounded-md">
             <h2 class="text-lg font-semibold">Archivos Registrados:</h2>
         </div>
@@ -77,6 +77,26 @@
                         <li>Alta Proveedores:</li>
                         <ul>
                             @foreach ($datosNoEncontradosAltaProveedor as $linea => $camposFaltantes)
+                                <li>Línea {{ $linea +2}}:
+                                    @foreach ($camposFaltantes as $campoFaltante)
+                                        {{ $campoFaltante }},
+                                    @endforeach
+                                </li>
+                            @endforeach
+                        </ul>
+                        <li>Registros tipo 1:</li>
+                        <ul>
+                            @foreach ($datosFaltantesTipo1 as $linea => $camposFaltantes)
+                                <li>Línea {{ $linea }}:
+                                    @foreach ($camposFaltantes as $campoFaltante)
+                                        {{ $campoFaltante }},
+                                    @endforeach
+                                </li>
+                            @endforeach
+                        </ul>
+                        <li>Registros tipo 2:</li>
+                        <ul>
+                            @foreach ($datosFaltantesTipo2 as $linea => $camposFaltantes)
                                 <li>Línea {{ $linea }}:
                                     @foreach ($camposFaltantes as $campoFaltante)
                                         {{ $campoFaltante }},
@@ -117,7 +137,24 @@
                         @endforeach
                     @endif
                     @if($mostrarMensajeErrorAltaProveedores)
+                    <p>Alta Proveedores</p>
                     @foreach ($datosNoEncontradosAltaProveedor as $linea => $datosFaltantes)
+                        <li>Línea {{ $linea }}:
+                            @foreach ($datosFaltantes as $datoFaltante)
+                                {{ $datoFaltante }},
+                            @endforeach
+                        </li>
+                    @endforeach
+                    <p>Registros tipo 1</p>
+                    @foreach ($mostrarDatosFaltantesTipo1 as $linea => $datosFaltantes)
+                            <li>Línea {{ $linea }}:
+                                @foreach ($datosFaltantes as $datoFaltante)
+                                    {{ $datoFaltante }},
+                                @endforeach
+                            </li>
+                    @endforeach
+                        <p>Registros tipo 2</p>
+                    @foreach ($datosFaltantesTipo2 as $linea => $datosFaltantes)
                         <li>Línea {{ $linea }}:
                             @foreach ($datosFaltantes as $datoFaltante)
                                 {{ $datoFaltante }},
@@ -219,12 +256,12 @@
                             Página {{ $paginaActual }} de {{ $totalPaginas }}
                         </p>
                             <div class="flex">
-                                <div class="p-2 flex items-center">
+                                {{-- <div class="p-2 flex items-center">
                                     <button>
                                         <a wire:click="descargarDatosRegistroTipo1"
                                             class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">Descargar Datos</a>
                                     </button>
-                                </div>
+                                </div> --}}
                                 <div class="p-2">
                                     <form wire:submit.prevent="eliminarUltimoArchivoTipo1">
                                         <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md">
@@ -402,13 +439,13 @@
                                 Página {{ $paginaActual }} de {{ $totalPaginas }}
                             </p>
                             <div class="flex">
-                                <div class="p-2 flex items-center">
+                               {{--  <div class="p-2 flex items-center">
                                     <button>
                                         <a wire:click="descargarDatosRegistroTipo2"
                                             class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">Descargar
                                             Datos</a>
                                     </button>
-                                </div>
+                                </div> --}}
                                 <div class="p-2">
                                     <form wire:submit.prevent="eliminarUltimosDatosTipo2">
                                         <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md">
