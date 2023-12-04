@@ -1,7 +1,8 @@
 <?php
 
+use App\Http\Controllers\clientController;
+use App\Http\Controllers\CrudClient as ControllersCrudClient;
 use Illuminate\Support\Facades\Route;
-
 use App\Http\Livewire\CargaArchivo;
 use App\Http\Livewire\Cobranzas;
 
@@ -17,5 +18,6 @@ use App\Http\Livewire\Cobranzas;
 */
 
 Route::get('/', CargaArchivo::class)->name('cargar-archivo');
-
 route::get('/cobranzas', Cobranzas::class)->name('cobranzas');
+Route::resource('/client', clientController::class);
+Route::name('client.create')->get('/client/create', [clientController::class, 'create']);

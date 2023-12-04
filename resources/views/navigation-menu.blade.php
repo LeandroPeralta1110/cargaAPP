@@ -8,8 +8,9 @@
                 <h1 id="animated-title" class="text-3xl font-semibold text-indigo-600 pl-16"></h1>
             </a>
             
-            <a href="{{ route('cargar-archivo') }}" class="ml-4 text-indigo-600 pl-12 underline">Alta Proveedores</a>
-            <a href="{{ route('cobranzas') }}" class="ml-4 text-indigo-600 underline">Cobranzas</a>
+            <x-nav-link href="{{ route('cargar-archivo') }}" :active="request()->routeIs('cargar-archivo')">Alta Proveedores
+            </x-nav-link>
+            <x-nav-link href="{{ route('cobranzas') }}" :active="request()->routeIs('cobranzas')">Cobranzas</x-nav-link>
         </div>
     </header>
 </div>
