@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Client;
 use Illuminate\Http\Request;
-use App\Models\client;
 
-class clientController extends Controller
+/**
+ * Class ClientController
+ * @package App\Http\Controllers
+ */
+class ClientController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -15,6 +19,7 @@ class clientController extends Controller
     public function index()
     {
         $clients = Client::paginate();
+
         return view('client.index', compact('clients'))
             ->with('i', (request()->input('page', 1) - 1) * $clients->perPage());
     }
@@ -38,16 +43,12 @@ class clientController extends Controller
      */
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
-            'razon_social' => 'required|string|max:255',
-            'telefono' => 'required|string|max:255',
-            'email' => 'required|email|unique:clients,email',
-        ]);
+        request()->validate(Client::$rules);
 
-        $client = Client::create($validatedData);
+        $client = Client::create($request->all());
 
         return redirect()->route('clients.index')
-            ->with('success', 'Cliente creado exitosamente.');
+            ->with('success', 'Client created successfully.');
     }
 
     /**
@@ -56,9 +57,9 @@ class clientController extends Controller
      * @param  int $id
      * @return \Illuminate\Http\Response
      */
-    public function show($id)
+    public function show($client_id)
     {
-        $client = Client::find($id);
+        $client = Client::find($client_id);
 
         return view('client.show', compact('client'));
     }
@@ -80,39 +81,29 @@ class clientController extends Controller
      * Update the specified resource in storage.
      *
      * @param  \Illuminate\Http\Request $request
-     * @param  int $id
+     * @param  Client $client
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, Client $client)
     {
-        $client = Client::find($id);
+        request()->validate(Client::$rules);
 
-        $validatedData = $request->validate([
-            'razon_social' => 'required|string|max:255',
-            'telefono' => 'required|string|max:255',
-            'email' => 'required|email|unique:clients,email,' . $id,
-        ]);
+        $client->update($request->all());
 
-        $client->update($validatedData);
-
-        return redirect()->route('clients.index')->with('success', 'Cliente actualizado correctamente.');
+        return redirect()->route('clients.index')
+            ->with('success', 'Client updated successfully');
     }
 
     /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int $id
-     * @return \Illuminate\Http\Response
+     * @param int $id
+     * @return \Illuminate\Http\RedirectResponse
+     * @throws \Exception
      */
     public function destroy($id)
     {
-        $client = Client::find($id);
+        $client = Client::find($id)->delete();
 
-        if ($client) {
-            $client->delete();
-            return redirect()->route('clients.index')->with('success', 'Cliente eliminado correctamente.');
-        }
-
-        return redirect()->route('clients.index')->with('error', 'Cliente no encontrado.');
+        return redirect()->route('clients.index')
+            ->with('success', 'Client deleted successfully');
     }
 }

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use Illuminate\Support\Carbon;
+use App\Models\client;
 
 class Cobranzas extends Component
 {
@@ -18,6 +19,7 @@ class Cobranzas extends Component
     public $archivo;
     public $contenidoArchivo = [];
     public $datosDuplicados=[];
+    public $clientesNoEncontrados=[];
 
     public function cargarArchivo()
 {
@@ -40,6 +42,21 @@ class Cobranzas extends Component
 
         // Detectar y almacenar datos duplicados
         $datosDuplicados = $this->detectarDatosDuplicados($this->contenidoArchivo);
+
+        // Obtener correos electrónicos del archivo
+        $correosArchivo = array_column($this->contenidoArchivo, 'Cliente');
+
+        // Obtener clientes que tienen correos electrónicos en la lista
+        $clientesEncontrados = Client::whereIn('email', $correosArchivo)->pluck('email')->toArray();
+
+        // Obtener clientes no encontrados
+        $clientesNoEncontrados = array_diff($correosArchivo, $clientesEncontrados);
+
+        // Filtrar los emails duplicados para mostrar solo uno por cliente
+        $clientesNoEncontrados = array_unique($clientesNoEncontrados);
+
+        // Almacenar clientes no encontrados en una variable de componente
+        $this->clientesNoEncontrados = $clientesNoEncontrados;
 
         // Otra lógica que necesites hacer después de procesar el archivo
 
@@ -137,6 +154,34 @@ class Cobranzas extends Component
 
         return $contenido;
     }
+
+    public function guardarCliente($email)
+{
+    // Verificar si el email ya está registrado en la base de datos
+    if (!Client::where('email', $email)->exists()) {
+        // Asignar un client_id aleatorio entre 0 y 1000
+        $client_id = rand(0, 1000);
+
+        // Registrar el cliente en la base de datos con el client_id asignado
+        Client::create([
+            'client_id' => $client_id,
+            'email' => $email,
+            'razon_social' => '', // Asigna el valor predeterminado aquí
+            'telefono' => '',
+        ]);
+
+        // Eliminar el email de la lista de clientes no encontrados
+        $this->clientesNoEncontrados = array_diff($this->clientesNoEncontrados, [$email]);
+
+        // Emitir un mensaje de éxito (opcional)
+        $this->emit('clienteGuardado', 'El cliente se ha guardado correctamente con client_id: ' . $client_id);
+    } else {
+        // El email ya está registrado en la base de datos
+        // Puedes emitir un mensaje o tomar alguna otra acción
+        $this->emit('clienteExistente', 'El cliente ya está registrado en la base de datos.');
+    }
+}
+
 
     // Función para verificar si una columna es una columna de fechas
     protected function esColumnaFecha($header)

@@ -3,7 +3,7 @@
         <!-- Primer contenedor -->
         <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5">
             <form wire:submit.prevent="cargarArchivo">
-                <div class="bg-gradient px-6 py-3 rounded-md">
+                <div class="bg-gradient px-6 py-3 text-white rounded-md">
                     <h2 class="text-lg font-semibold">Archivo: </h2>
                 </div>
                 <input class="text-white p-4" type="file" wire:model="archivo">
@@ -56,12 +56,35 @@
         </div>
     </div>
     
-        <!-- Tercer contenedor -->
-        <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5">
-            <div class="bg-gradient px-6 py-3 rounded-md">
-                <h2 class="text-lg font-semibold">Clientes no encontrados</h2>
-            </div>
+        <!-- Tercer contenedor mejorado -->
+<div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 mt-5 overflow-hidden">
+    <div class="flex justify-between bg-gradient text-white px-6 py-3 rounded-md">
+        <h2 class="text-lg font-semibold">Registrar Clientes de Archivos</h2>
+    </div>
+    @if(count($clientesNoEncontrados) > 0)
+        <div class="p-4">
+            <table class="min-w-full border border-gray-300">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="border-b p-3 text-left">Email</th>
+                        <th class="border-b p-3 text-left">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($clientesNoEncontrados as $cliente)
+                        <tr class="{{ $loop->odd ? 'bg-gray-50' : 'bg-white' }}">
+                            <td class="border p-3">{{ $cliente }}</td>
+                            <td class="border p-3">
+                                <button wire:click="guardarCliente('{{ $cliente }}')" class="bg-green-500 text-white px-4 py-2 rounded-md">Guardar</button>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
+    @endif
+</div>
+
     </div>
 
     <!-- Cuarto contenedor debajo de los primeros tres -->
@@ -120,7 +143,7 @@
                 <!-- Contenido de la barra lateral -->
                 <h2 class="text-lg font-semibold mb-4">Opciones</h2>
                 <!-- Enlace hacia client.index -->
-                <a href="{{ route('client.index') }}" class="text-blue-300 hover:underline mb-4 block">Ver Clientes</a>
+                <a href="{{ route('clients.index') }}" class="text-blue-300 hover:underline mb-4 block">Ver Clientes</a>
                 <!-- Puedes agregar más botones u opciones aquí -->
                 <button @click="sidebarOpen = false" class="bg-red-500 text-white px-4 py-2 rounded-md">Cerrar</button>
             </div>

@@ -5,6 +5,7 @@ use App\Http\Controllers\CrudClient as ControllersCrudClient;
 use Illuminate\Support\Facades\Route;
 use App\Http\Livewire\CargaArchivo;
 use App\Http\Livewire\Cobranzas;
+use Illuminate\Support\Facades\Auth;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,8 +17,8 @@ use App\Http\Livewire\Cobranzas;
 | contains the "web" middleware group. Now create something great!
 |
 */
-
 Route::get('/', CargaArchivo::class)->name('cargar-archivo');
-route::get('/cobranzas', Cobranzas::class)->name('cobranzas');
-Route::resource('/client', clientController::class);
-Route::name('client.create')->get('/client/create', [clientController::class, 'create']);
+Route::get('/cobranzas', Cobranzas::class)->name('cobranzas');
+Route::resource('clients', clientController::class);
+Auth::routes();
+Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');

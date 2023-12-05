@@ -6,20 +6,20 @@
     "license": "MIT",
     "require": {
         "php": "^8.0.2",
-        "caouecs/laravel-lang": "*",
         "guzzlehttp/guzzle": "^7.2",
         "laravel/framework": "^9.19",
         "laravel/jetstream": "^3.0",
         "laravel/sanctum": "^3.0",
         "laravel/tinker": "^2.7",
-        "laravel/ui": "*",
+        "laravel/ui": "^4.2",
+        "laravelcollective/html": "*",
         "livewire/livewire": "^2.11",
         "maatwebsite/excel": "^1.1",
         "phpoffice/phpspreadsheet": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
-        "ibex/crud-generator": "*",
+        "ibex/crud-generator": "^1.4",
         "laravel/pint": "^1.0",
         "laravel/sail": "^1.0.1",
         "mockery/mockery": "^1.6",

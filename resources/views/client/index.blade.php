@@ -1,55 +1,71 @@
 <x-app-layout>
-    <div class="mx-auto p-4">
-        <div class="bg-white shadow-lg rounded-lg">
-            <div class="p-6">
-                <h2 class="text-2xl font-semibold">{{ __('Clientes') }}</h2>
-                <div class="text-right">
-                    <a href="{{ route('client.create') }}" class="px-4 py-2 mt-4 text-white bg-blue-500 rounded hover:bg-blue-700">
-                        {{ __('Crear Nuevo') }}
+<div class="container mx-auto">
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+        <div class="p-4 border-b">
+            <div class="flex justify-between items-center">
+                <span class="text-xl font-bold">{{ __('Client') }}</span>
+                <div class="space-x-2">
+                    <a href="{{ route('clients.create') }}" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                        {{ __('Create New') }}
                     </a>
                 </div>
             </div>
+        </div>
 
-            @if ($message = Session::get('success'))
-                <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4">
-                    <p>{{ $message }}</p>
-                </div>
-            @endif
+        @if ($message = Session::get('success'))
+            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4">
+                <p>{{ $message }}</p>
+            </div>
+        @endif
 
-            <div class="p-4">
-                <div class="table-responsive">
-                    <table class="min-w-full bg-white border">
-                        <thead>
+        <div class="p-4">
+            <div class="overflow-x-auto">
+                <table class="min-w-full border border-gray-300">
+                    <thead>
+                        <tr>
+                            <th class="border-b p-2">#</th>
+                            <th class="border-b p-2">Client Id</th>
+                            <th class="border-b p-2">Razon Social</th>
+                            <th class="border-b p-2">Telefono</th>
+                            <th class="border-b p-2">Email</th>
+                            <th class="border-b p-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($clients as $client)
                             <tr>
-                                <th class="px-4 py-2">{{ __('ID') }}</th>
-                                <th class="px-4 py-2">{{ __('razon social') }}</th>
-                                <th class="px-4 py-2">{{ __('Email') }}</th>
-                                <th class="px-4 py-2">{{__('telefono')}}</th>
-                                <th class="px-4 py-2">{{ __('Acciones') }}</th>
+                                <td class="border-b p-2">{{ ++$i }}</td>
+                                <td class="border-b p-2">{{ $client->client_id }}</td>
+                                <td class="border-b p-2">{{ $client->razon_social }}</td>
+                                <td class="border-b p-2">{{ $client->telefono }}</td>
+                                <td class="border-b p-2">{{ $client->email }}</td>
+                                <td class="border-b p-2">
+                                    <div class="space-x-2">
+                                        <a href="{{ route('clients.show', $client->client_id) }}" class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">
+                                            <i class="fa fa-fw fa-eye"></i> {{ __('Show') }}
+                                        </a>                                        
+                                        <a href="{{ route('clients.edit',$client->client_id) }}" class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">
+                                            <i class="fa fa-fw fa-edit"></i> {{ __('Edit') }}
+                                        </a>
+                                        <form action="{{ route('clients.destroy',$client->client_id) }}" method="POST" class="inline-block">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">
+                                                <i class="fa fa-fw fa-trash"></i> {{ __('Delete') }}
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($clients as $client)
-                                <tr>
-                                    <td class="border px-4 py-2">{{ $client->client_id }}</td>
-                                    <td class="border px-4 py-2">{{ $client->razon_social }}</td>
-                                    <td class="border px-4 py-2">{{ $client->email }}</td>
-                                    <td class="border px-4 py-2">{{ $client->telefono }}</td>
-                                        <td class="border px-4 py-2">
-                                            <a href="{{ route('users.show', $user->id) }}" class="px-2 py-1 text-blue-500 hover:underline">{{ __('Ver') }}</a>
-                                            <a href="{{ route('users.edit', $user->id) }}" class="px-2 py-1 text-green-500 hover:underline">{{ __('Editar') }}</a>
-                                            <form action="{{ route('users.destroy', $user->id) }}" method="POST" class="inline-block">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="px-2 py-1 text-red-500 hover:underline">{{ __('Eliminar') }}</button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         </div>
+
+        <div class="p-4">
+            {!! $clients->links() !!}
+        </div>
     </div>
+</div>
 </x-app-layout>
