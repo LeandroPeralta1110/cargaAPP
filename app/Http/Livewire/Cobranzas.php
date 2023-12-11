@@ -20,6 +20,8 @@ class Cobranzas extends Component
     public $contenidoArchivo = [];
     public $datosDuplicados=[];
     public $clientesNoEncontrados=[];
+    public $clientesEncontrados=[];
+    public $porPagina = 20;
 
     public function cargarArchivo()
 {
@@ -38,9 +40,10 @@ class Cobranzas extends Component
         } else {
             // Para archivos CSV
             $this->contenidoArchivo = $this->procesarArchivoCSV();
+           
         }
 
-        // Detectar y almacenar datos duplicados
+        /* // Detectar y almacenar datos duplicados
         $datosDuplicados = $this->detectarDatosDuplicados($this->contenidoArchivo);
 
         // Obtener correos electrónicos del archivo
@@ -56,7 +59,7 @@ class Cobranzas extends Component
         $clientesNoEncontrados = array_unique($clientesNoEncontrados);
 
         // Almacenar clientes no encontrados en una variable de componente
-        $this->clientesNoEncontrados = $clientesNoEncontrados;
+        $this->clientesNoEncontrados = $clientesNoEncontrados; */
 
         // Otra lógica que necesites hacer después de procesar el archivo
 
@@ -64,11 +67,11 @@ class Cobranzas extends Component
         $this->emit('archivoProcesado', 'El archivo se ha procesado correctamente.');
 
         // Almacenar datos duplicados en una variable de componente
-        $this->datosDuplicados = $datosDuplicados;
+        /* $this->datosDuplicados = $datosDuplicados; */
     }
 }
 
-    protected function detectarDatosDuplicados($contenido)
+    /* protected function detectarDatosDuplicados($contenido)
     {
         // Inicializar un array para almacenar los datos duplicados
         $datosDuplicados = [];
@@ -90,9 +93,9 @@ class Cobranzas extends Component
         });
 
         return $datosDuplicados;
-    }
+    } */
 
-    public function eliminarDuplicados()
+   /*  public function eliminarDuplicados()
 {
     // Filtrar el contenido para mantener solo los no duplicados
     $contenidoSinDuplicados = collect($this->contenidoArchivo)->reject(function ($item) {
@@ -104,58 +107,65 @@ class Cobranzas extends Component
 
     // Emitir un mensaje de éxito (opcional)
     $this->emit('duplicadosEliminados', 'Los datos duplicados se han eliminado correctamente.');
-}
+} */
 
-    protected function procesarArchivoExcel()
-    {
-        // Utilizar PhpSpreadsheet para cargar el archivo Excel
-        $spreadsheet = IOFactory::load($this->archivo->getRealPath());
+protected function procesarArchivoExcel()
+{
+    // Utilizar PhpSpreadsheet para cargar el archivo Excel
+    $spreadsheet = IOFactory::load($this->archivo->getRealPath());
 
-        // Obtener la hoja activa del archivo Excel
-        $sheet = $spreadsheet->getActiveSheet();
+    // Obtener la hoja activa del archivo Excel
+    $sheet = $spreadsheet->getActiveSheet();
 
-        // Obtener las filas como un array asociativo
-        $contenido = [];
-        $encabezados = [];
+    // Obtener las filas como un array asociativo
+    $contenido = [];
+    $encabezados = [];
 
-        foreach ($sheet->getRowIterator() as $row) {
-            $cellIterator = $row->getCellIterator();
-            $cellIterator->setIterateOnlyExistingCells(FALSE); // Permitir celdas vacías
-
-            $rowContent = [];
-
-            foreach ($cellIterator as $index => $cell) {
-                // Obtener el valor formateado de la celda
-                $cellValue = $cell->getFormattedValue();
-
-                // La primera fila se trata como encabezados
-                if ($row->getRowIndex() === 1) {
-                    $encabezados[$index] = !empty($cellValue) ? $cellValue : "Columna_$index";
+    foreach ($sheet->getRowIterator() as $row) {
+        $cellIterator = $row->getCellIterator();
+        $cellIterator->setIterateOnlyExistingCells(FALSE); // Permitir celdas vacías
+    
+        $rowContent = [];
+    
+        foreach ($cellIterator as $index => $cell) {
+            // Obtener el valor formateado de la celda
+            $cellValue = $cell->getFormattedValue();
+    
+            // La primera fila se trata como encabezados
+            if ($row->getRowIndex() === 1) {
+                $encabezados[$index] = !empty($cellValue) ? $cellValue : "Columna_$index";
+            } else {
+                // Las filas subsiguientes se tratan como datos
+                $currentHeader = $encabezados[$index] ?? "Columna_$index";
+                $isDateColumn = $this->esColumnaFecha($currentHeader);
+    
+                // Convertir fechas solo si es una columna de fechas
+                if ($isDateColumn) {
+                    $formattedDate = Carbon::parse($cellValue)->format('Y-m-d');
+                    $rowContent[$currentHeader] = $formattedDate;
                 } else {
-                    // Las filas subsiguientes se tratan como datos
-                    $currentHeader = $encabezados[$index] ?? "Columna_$index";
-                    $isDateColumn = $this->esColumnaFecha($currentHeader);
-
-                    // Convertir fechas solo si es una columna de fechas
-                    if ($isDateColumn) {
-                        $formattedDate = Carbon::parse($cellValue)->format('Y-m-d');
-                        $rowContent[$currentHeader] = $formattedDate;
-                    } else {
-                        $rowContent[$currentHeader] = $cellValue;
-                    }
+                    $rowContent[$currentHeader] = $cellValue;
                 }
             }
-
-            // Agregar la fila solo si no es la primera fila (encabezados)
-            if ($row->getRowIndex() > 1 && !empty(array_filter($rowContent))) {
-                $contenido[] = $rowContent;
-            }
         }
+    
+        // Agregar la fila solo si no es la primera fila (encabezados)
+        if ($row->getRowIndex() > 1 && !empty(array_filter($rowContent))) {
+            // Buscar el cliente correspondiente en el array de clientesEncontrados
+            $cliente = collect($this->clientesEncontrados)->where('email', $rowContent['CLIENTE'])->first();
+    
+            // Verificar si se encontró un cliente antes de asignar valores
+            $idCliente = optional($cliente)->id;
+            $razonSocialCliente = optional($cliente)->razon_social;
+    
+            $contenido[] = array_merge($rowContent);
+        }
+    }    
 
-        return $contenido;
-    }
+    return $contenido;
+}
 
-    public function guardarCliente($email)
+    /* public function guardarCliente($email)
 {
     // Verificar si el email ya está registrado en la base de datos
     if (!Client::where('email', $email)->exists()) {
@@ -180,7 +190,7 @@ class Cobranzas extends Component
         // Puedes emitir un mensaje o tomar alguna otra acción
         $this->emit('clienteExistente', 'El cliente ya está registrado en la base de datos.');
     }
-}
+} */
 
 
     // Función para verificar si una columna es una columna de fechas
@@ -195,30 +205,43 @@ class Cobranzas extends Component
 
 
     protected function procesarArchivoCSV()
-    {
-        $contenido = file($this->archivo->getRealPath(), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+{
+    $contenido = file($this->archivo->getRealPath(), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
-        dd( $contenido);
-        // Procesar cada línea utilizando str_getcsv y formatear los datos
-        $resultados = [];
-        foreach ($contenido as $linea) {
-            $datos = str_getcsv($linea, ',');
-
-            // Asegurarse de que haya suficientes datos para procesar
-            if (count($datos) >= 6) {
-                $resultados[] = [
-                    'Impacta' => $datos[0],
-                    'Cliente' => $datos[1],
-                    'Subscripcion' => $datos[2],
-                    'Operacion' => $datos[3],
-                    'Importe' => $datos[4],
-                    'Pago' => $datos[5],
-                ];
-            }
+    // Procesar cada línea omitiendo la primera fila (encabezados)
+    $resultados = [];
+    foreach ($contenido as $index => $linea) {
+        // Omitir la primera fila (encabezados)
+        if ($index === 0) {
+            continue;
         }
 
-        return $resultados;
+        $datos = str_getcsv($linea, ';');
+
+        // Asegurarse de que haya suficientes datos para procesar
+        if (count($datos) >= 9) {
+            // Convertir la cadena de bytes a UTF-8
+            $datos[3] = utf8_encode($datos[3]);
+
+            // Quitar el símbolo de peso del campo 'IMPORTE'
+            $datos[5] = str_replace('$ ', '', $datos[5]);
+
+            $resultados[] = [
+                'SERV.' => $datos[0],
+                'IMPACTA' => $datos[1],
+                'CLIENTE' => $datos[2],
+                'SUSCRIPCION' => $datos[3],
+                'OPERACIÓN' => $datos[4],
+                'IMPORTE' => $datos[5],
+                'PAGO' => $datos[6],
+                'ID' => $datos[7],
+                'RAZON SOCIAL' => $datos[8],
+            ];
+        }
     }
+
+    return $resultados;
+}
 
     public function render()
     {

@@ -19,6 +19,24 @@
 
         <!-- Styles -->
         @livewireStyles
+        <style>
+            /* Estilo para personalizar el icono de carga */
+            .cargando-icono {
+                display: inline-block;
+                width: 20px;
+                height: 20px;
+                border: 4px solid #3490dc; /* Color azul, puedes ajustarlo según tu paleta de colores */
+                border-top: 4px solid transparent;
+                border-radius: 50%;
+                animation: spin 1s linear infinite; /* Animación de rotación */
+            }
+    
+            /* Animación de rotación */
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
     </head>
     <body class="font-sans antialiased">
         <x-banner />
