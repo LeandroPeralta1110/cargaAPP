@@ -145,6 +145,11 @@ protected function procesarArchivoExcel()
                     $rowContent[$currentHeader] = $formattedDate;
                 } else {
                     $rowContent[$currentHeader] = $cellValue;
+
+                    // Quitar el símbolo de peso del campo 'IMPORTE'
+                    if ($currentHeader === 'IMPORTE') {
+                        $rowContent[$currentHeader] = str_replace('$ ', '', $cellValue);
+                    }
                 }
             }
         }

@@ -97,9 +97,14 @@
 
     <!-- Cuarto contenedor debajo de los primeros tres -->
     <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 mt-5 overflow-hidden">
-        <div class="bg-gradient text-white px-6 py-3">
+        <div class="bg-gradient text-white px-6 py-3 flex justify-between items-center">
             <h2 class="text-lg font-semibold">Contenido del Archivo</h2>
-        </div>
+            @if($contenidoArchivo)
+                <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 m-4 rounded-md mt-4">
+                    Subir a Bejerman
+                </button>
+            @endif
+        </div>               
         <div class="max-h-400px overflow-y-auto">
             <table class="min-w-full table-auto">
                 <thead>
