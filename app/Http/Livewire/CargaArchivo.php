@@ -107,45 +107,49 @@ class CargaArchivo extends Component
     
         $contenido = $this->archivo->getClientOriginalExtension();
         $identificadorUnico = uniqid();
-
+        
         if ($contenido == 'xlsx') {
-        $spreadsheet = IOFactory::load($this->archivo->getRealPath());
-        $worksheet = $spreadsheet->getActiveSheet();
-        $encabezado = [];
-        $lineas = [];
-        $primerFila = true; // Variable para rastrear la primera fila
-        foreach ($worksheet->getRowIterator() as $row) {
-            $cellIterator = $row->getCellIterator();
-            $cellData = [];
-            foreach ($cellIterator as $cell) {
-                $cellData[] = $cell->getValue();
+            $spreadsheet = IOFactory::load($this->archivo->getRealPath());
+            $worksheet = $spreadsheet->getActiveSheet();
+            $encabezado = [];
+            $lineas = [];
+            $primerFila = true; // Variable para rastrear la primera fila
+            foreach ($worksheet->getRowIterator() as $row) {
+                $cellIterator = $row->getCellIterator();
+                $cellData = [];
+                foreach ($cellIterator as $cell) {
+                    $cellData[] = $cell->getValue();
+                }
+                if ($primerFila) {
+                    $encabezado = $cellData; // Esto sigue siendo el encabezado en la fila 0
+                    $primerFila = false;
+                } else {
+                    $lineas[] = $cellData; // Aquí empiezan los datos en la fila 1
+                } 
             }
-            if ($primerFila) {
-                $encabezado = $cellData; // Esto sigue siendo el encabezado en la fila 0
-                $primerFila = false;
-            } else {
-                $lineas[] = $cellData; // Aquí empiezan los datos en la fila 1
+        } else {
+            $contenido = file_get_contents($this->archivo->getRealPath());
+            $lineas = explode("\n", $contenido);
+            $encabezado = [];
+        
+            // Verifica si hay un encabezado antes de intentar eliminarlo
+            if (!empty($lineas[0])) {
+                $encabezado = str_getcsv($lineas[0], ';');
+                unset($lineas[0]);
             }
         }
-    } else {
-        $contenido = file_get_contents($this->archivo->getRealPath());
-        $lineas = explode("\n", $contenido);
-        $encabezado = [];
-        if (isset($lineas[0])) {
-            $encabezado = str_getcsv($lineas[0], ';');
-            unset($lineas[0]);
-        }
-    }
-            
+        
         $contadorRegistrosAltaProveedor = 1;
         $datosArchivoOriginal = [];
         
-        for ($contadorLinea = 1; $contadorLinea < count($lineas); $contadorLinea++) {
+        // Ajusta el índice inicial dependiendo del tipo de contenido
+        $indiceInicial = ($contenido == 'xlsx') ? 0 : 1;
+        
+        for ($contadorLinea = $indiceInicial; $contadorLinea < count($lineas); $contadorLinea++) {
             $linea = $lineas[$contadorLinea];
-
+        
             // Verifica si $linea es un array y si es así, simplemente úsalo como está, de lo contrario, divídelo
             $datos = is_array($linea) ? $linea : str_getcsv($linea, ';');
-            
             // Inicializa variables para verificar si se han encontrado los campos requeridos
             $cbuEncontrado = false;
             $aliasEncontrado = false;
@@ -197,8 +201,8 @@ class CargaArchivo extends Component
                     $email = str_pad($email, 49, ' ', STR_PAD_RIGHT);
                     $datosValidados['email'] = $email;
                     $emailEncontrado = true;
-                }elseif(preg_match('/^\d{5}$/', $dato)) {
-                    // Este dato parece ser el número de comprobante (5 dígitos)
+                }elseif(preg_match('/^\d{8}$/', $dato)) {
+                    // Este dato parece ser el número de comprobante (8 dígitos)
                     if ($numeroComprobante === null) {
                         $numeroComprobante = $dato;
                     }
@@ -389,6 +393,14 @@ public function cargaArchivoTipo1($params = null,$archivoOriginalSinDuplicados =
             $infoCriterioEmpresa = substr($infoCriterioEmpresa, 0, 20);
         }
 
+        $fechaActual = Carbon::now();
+
+        // Retroceder al día hábil anterior (lunes a viernes)
+        $diaHabilAnterior = $fechaActual->subWeekday();
+
+        // Formatear la fecha según tus necesidades
+        $fechaFormateada = $diaHabilAnterior->format("d/m/Y");
+
         // Inicializa datos preestablecidos con ceros
         $datosPreestablecidos = [
             'tipo_pagos' => 'MIN',
@@ -402,7 +414,7 @@ public function cargaArchivoTipo1($params = null,$archivoOriginalSinDuplicados =
         $datosValidados = [
             'tipo_registro' => '1',
             'moneda'=> '0',
-            'fecha_pago' => date("d/m/Y"),
+            'fecha_pago' => $fechaFormateada,
             'info_criterio_empresa' => $infoCriterioEmpresa,
             'numero_envio' => '1',
             'codigo_convenio' => '0470032751'
@@ -634,12 +646,12 @@ public function cargaArchivoTipo1($params = null,$archivoOriginalSinDuplicados =
                 }
             }
 
-            $existeDuplicado = $this->existeDuplicado($numeroComprobante, $referencia, $filasProcesadas);
+            /* $existeDuplicado = $this->existeDuplicado($numeroComprobante, $referencia, $filasProcesadas); */
 
-        if ($existeDuplicado) {
+        /* if ($existeDuplicado) {
             // Llamar a la función notificarDuplicado si es un duplicado
             $this->notificarDuplicado($contadorLinea, $numeroComprobante, $referencia, $datosDuplicados,$identificadorUnico);
-        } else {
+        } else { */
             // No es un duplicado, agrega esta fila a las filas procesadas
             $filasProcesadas[] = [
                 'numeroComprobante' => $numeroComprobante,
@@ -681,7 +693,7 @@ public function cargaArchivoTipo1($params = null,$archivoOriginalSinDuplicados =
             if(!empty($camposFaltantes)){
                 $datosNoEncontrados[$contadorLinea] = $camposFaltantes;
             }
-        }
+       /*  } */
         }
     }
 
@@ -732,13 +744,14 @@ public function cargaArchivoTipo1($params = null,$archivoOriginalSinDuplicados =
         private function existeDuplicado($numeroComprobante, $num_fac, $filasProcesadas)
         {
             foreach ($filasProcesadas as $fila) {
-                if ($fila['numeroComprobante'] === $numeroComprobante && $fila['num_fac'] === $num_fac) {
+                if ($fila['numeroComprobante'] === $numeroComprobante) {
+                    // Si encuentras un número de comprobante igual, descarta la fila
                     return true;
                 }
             }
-
             return false;
         }
+
 
         private function notificarDuplicado($contadorLinea, $numeroComprobante, $num_fac, &$datosDuplicados,$identificadorUnico)
         {
@@ -778,7 +791,7 @@ private function validarCUIT($dato)
 private function validarImporte($dato)
 {
     // Realiza la validación para Importe aquí, devuelve true si es válido, false en caso contrario
-    return preg_match('/\d+,\d{2}/', $dato);
+    return preg_match('/\d+[.,]\d{2}/', $dato);
 }
 
 private function validarReferencia($dato)
@@ -926,15 +939,26 @@ private function validarIdentificacionCliente($dato)
         // Genera el contenido del archivo TXT
         $contenido = '';
 
-        // Descargar datos tipo 1
-        $contenido .= $this->descargarDatosRegistroTipo1();
+        // Obtén la cantidad máxima de registros por tipo
+        $maxRegistrosPorTipo = max(
+            count($this->datosProcesadosTipo1),
+            count($this->datosProcesadosTipo2)
+        );
+    
+        // Itera sobre los índices
+        for ($indice = 0; $indice < $maxRegistrosPorTipo; $indice++) {
+            // Agrega los datos de cada tipo, si existen
+            if ($indice < count($this->datosProcesadosTipo1)) {
+                $contenido .= $this->descargarDatosRegistroTipo1($indice);
+            }
+    
+            if ($indice < count($this->datosProcesadosTipo2)) {
+                $contenido .= $this->descargarDatosRegistroTipo2($indice);
+            }
+        }
 
-        // Descargar datos tipo 2
-        $contenido .= $this->descargarDatosRegistroTipo2();
-
-        // Descargar datos tipo 3
-        $contenido .= $this->descargarDatosRegistroTipo3();
-
+        $contenido .= $this->descargarDatosRegistroTipo3($indice);
+        
         // Define el nombre del archivo
         $nombreArchivo = 'datos_alta_proveedores.txt';
 
@@ -955,6 +979,7 @@ private function validarIdentificacionCliente($dato)
     }
 }
 
+
 public function datosNoEncontrados(){
     $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo! Los siguientes campos son obligatorios: ';
     $this->mostrarMensajeError = true;
@@ -963,253 +988,218 @@ public function datosNoEncontrados(){
     return;
 }
     
-    public function descargarDatosRegistroTipo1()
-    {
+public function descargarDatosRegistroTipo1($indice)
+{
+    // Verifica que la sección actual sea "registro_tipo_1" y que haya datos antes de generar el archivo
+    if (count($this->datosProcesadosTipo1) > $indice) {
+        // Verifica que todos los campos necesarios estén presentes en al menos una fila
+        $camposNecesarios = [
+            'cbu',
+            'entidad_acreditar',
+            'cuit',
+            'moneda',
+            'fecha_pago',
+            'info_criterio_empresa',
+            'codigo_convenio',
+            'numero_envio',
+        ];
+
+        $datosFaltantes = [];
+
+        // Utiliza el índice $indice para acceder a los datos del cliente específico
+        $fila = $this->datosProcesadosTipo1[$indice];
+
+        foreach ($camposNecesarios as $campo) {
+            if (!isset($fila[$campo])) {
+                $datosFaltantes[] = $campo;
+            }
+        }
         // Inicializa la variable de contenido
         $contenido = '';
-        // Verifica que la sección actual sea "registro_tipo_1" y que haya datos antes de generar el archivo
-        if (count($this->datosProcesadosTipo1) > 0) {
-            // Verifica que todos los campos necesarios estén presentes en al menos una fila
-            $camposNecesarios = [
-                'cbu',
-                'entidad_acreditar',
-                'cuit',
-                'moneda',
-                'fecha_pago',
-                'info_criterio_empresa',
-                'codigo_convenio',
-                'numero_envio',
-            ];
-    
-            $datosFaltantes = [];
-    
-            foreach ($camposNecesarios as $campo) {
-                $campoEncontrado = false;
-    
-                foreach ($this->datosProcesadosTipo1 as $fila) {
-                    if (isset($fila[$campo])) {
-                        $campoEncontrado = true;
-                        break;
-                    }
-                }
-    
-                if (!$campoEncontrado) {
-                    $datosFaltantes[] = $campo;
-                }
-            }
 
-            if (!empty($datosFaltantes)) {
-                // Al menos un campo necesario está faltante
-                $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                $this->mostrarMensajeError = true;
-                $this->mostrarMensajeErrorTipo1 = true;
-                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
-    
-                // Establece el intento de descarga
-                $this->intentoDescarga = true;
-    
-                // Retorna para no continuar con la descarga
-                return;
-            }
+        if (!empty($datosFaltantes)) {
+            // Al menos un campo necesario está faltante
+            $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
+            $this->mostrarMensajeError = true;
+            $this->mostrarMensajeErrorTipo1 = true;
+            $this->mostrarDatosFaltantesTipo1 = $datosFaltantes;
 
-            foreach ($this->datosProcesadosTipo1 as $fila) {
-                if(isset($fila['entidad_acreditar'])){
-                   $cuentaSuc = $fila['entidad_acreditar']; 
-                }else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                $this->mostrarMensajeError = true;
-                $this->mostrarMensajeErrorTipo1 = true;
-                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
-    
-                // Establece el intento de descarga
-                $this->intentoDescarga = true;
-    
-                // Retorna para no continuar con la descarga
-                return;
-                }
-                // Verificar si la cadena tiene 3 caracteres numéricos
-                if (strlen($cuentaSuc) === 3 && is_numeric($cuentaSuc)) {
-                    // Agregar ceros a la izquierda para que la longitud sea 4
-                    $cuentaSuc = str_pad($cuentaSuc, 4, '0', STR_PAD_LEFT);
-                }else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                $this->mostrarMensajeError = true;
-                $this->mostrarMensajeErrorTipo1 = true;
-                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
-    
-                // Establece el intento de descarga
-                $this->intentoDescarga = true;
-    
-                // Retorna para no continuar con la descarga
-                return;
-                }
+            // Establece el intento de descarga
+            $this->intentoDescarga = true;
 
-                if(isset($fila['cbu'])){
-                    $cbu = $fila['cbu'];
-                    
-                    // Obtener los primeros 8 dígitos
-                    $primerBloque = substr($cbu, 0, 8);
-                    
-                    // Obtener los siguientes 14 dígitos
-                    $segundoBloque = substr($cbu, 8, 14);
-                    
-                    // Modificar el primer número del segundo bloque a 2
-                    $segundoBloque = '2' . substr($segundoBloque, 1);
-                    
-                    // Modificar el segundo número del segundo bloque a 0
-                    $segundoBloque = substr($segundoBloque, 0, 1) . '0' . substr($segundoBloque, 2);
-                }
-                else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                $this->mostrarMensajeError = true;
-                $this->mostrarMensajeErrorTipo1 = true;
-                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
-    
-                // Establece el intento de descarga
-                $this->intentoDescarga = true;
-    
-                // Retorna para no continuar con la descarga
-                return;
-                }
-
-                if(isset($fila['fecha_pago'])){
-                   $fechaPago = $fila['fecha_pago'];
-                   $fechaSinBarras = str_replace('/', '', $fechaPago);
-   
-                   // Utiliza DateTime para convertir la fecha
-                   $fecha = DateTime::createFromFormat('dmY', $fechaSinBarras);
-   
-                   // Formatea la fecha como deseas
-                   $fechaFormateada = $fecha->format('Ymd');
-                }else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                $this->mostrarMensajeError = true;
-                $this->mostrarMensajeErrorTipo1 = true;
-                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
-    
-                // Establece el intento de descarga
-                $this->intentoDescarga = true;
-    
-                // Retorna para no continuar con la descarga
-                return;
-                }
-               
-                if(isset($fila['numero_envio'])){
-                    $numeroEnvio = $fila['numero_envio'];
-                    $numeroEnvioFormateado = str_pad($numeroEnvio, 6, '0', STR_PAD_LEFT);
-                }else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
-                $this->mostrarMensajeError = true;
-                $this->mostrarMensajeErrorTipo1 = true;
-                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
-    
-                // Establece el intento de descarga
-                $this->intentoDescarga = true;
-    
-                // Retorna para no continuar con la descarga
-                return;
-                }
-
-                // Formatea los campos según las longitudes
-                $contenido .=
-                    $fila['tipo_registro'] .
-                    $fila['cuit'] .
-                    $cuentaSuc .
-                    $segundoBloque .
-                    $fila['moneda'] .
-                    $fechaFormateada .
-                    $fila['info_criterio_empresa'] .
-                    $fila['tipo_pagos'] .
-                    $fila['clase_pagos'] .
-                    $fila['codigo_convenio'] .
-                    $numeroEnvioFormateado .
-                    $fila['sistema_original'] .
-                    $fila['filler'] .
-                    $fila['casa_envio_rendicion'] .
-                    $fila['filler_100'] . "\n";
-            }
-    
-            /* // Define el nombre del archivo
-            $nombreArchivo = 'datos_registro_tipo_1.txt';
-    
-            // Crea el archivo en el almacenamiento temporal
-            file_put_contents($nombreArchivo, $contenido);
-    
-            // Proporciona una respuesta para descargar el archivo
-            return response()->stream(
-                function () use ($nombreArchivo) {
-                    readfile($nombreArchivo);
-                },
-                200,
-                [
-                    'Content-Type' => 'text/plain',
-                    'Content-Disposition' => 'attachment; filename=' . $nombreArchivo,
-                ]
-            ); */
+            // Retorna para no continuar con la descarga
             return $contenido;
         }
-        return $contenido;
-    }
-    
-    public function descargarDatosRegistroTipo2()
-    {
-        // Restablece la variable $intentoDescarga
-        $this->intentoDescarga = false;
-    
-        // Verifica que haya datos cargados en datosProcesadosTipo2
-        if (count($this->datosProcesadosTipo2) > 0) {
-            // Verifica que todos los campos necesarios estén presentes en al menos una fila
-            $camposNecesarios = ['tipo_registro', 'entidad_acreditar', 'sucursal', 'cbu','cuit', 'importe','identificacion_cliente', 'nro_documento','sucursal_acreditar'];
-    
-            $datosFaltantes = [];
-    
-            foreach ($camposNecesarios as $campo) {
-                $campoEncontrado = false;
-    
-                foreach ($this->datosProcesadosTipo2 as $fila) {
-                    if (isset($fila[$campo])) {
-                        $campoEncontrado = true;
-                        break;
-                    }
-                }
-    
-                if (!$campoEncontrado) {
-                    $datosFaltantes[] = $campo;
-                }
-            }
 
-            if (!empty($datosFaltantes)) {
-                // Al menos un campo necesario está faltante
+            if (isset($fila['entidad_acreditar'])) {
+                $cuentaSuc = $fila['entidad_acreditar'];
+            } else {
                 $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
                 $this->mostrarMensajeError = true;
-                $this->mostrarMensajeErrorTipo2 = true;
-    
+                $this->mostrarMensajeErrorTipo1 = true;
+                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
+
                 // Establece el intento de descarga
                 $this->intentoDescarga = true;
-    
+
                 // Retorna para no continuar con la descarga
                 return;
             }
-    
-            // Genera el contenido del archivo TXT
-            $contenido = '';
-            $tipoRegistro = '2';
-    
-            foreach ($this->datosProcesadosTipo2 as $fila) {
-                if(isset($fila['entidad_acreditar'])){
-                    $entidadAcreditar = $fila['entidad_acreditar'];
-                    $entidad = str_pad($entidadAcreditar, 4, '0', STR_PAD_LEFT);
-                }else{
-                    $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
+            // Verificar si la cadena tiene 3 caracteres numéricos
+            if (strlen($cuentaSuc) === 3 && is_numeric($cuentaSuc)) {
+                // Agregar ceros a la izquierda para que la longitud sea 4
+                $cuentaSuc = str_pad($cuentaSuc, 4, '0', STR_PAD_LEFT);
+            } else {
+                $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
                 $this->mostrarMensajeError = true;
-                $this->mostrarMensajeErrorTipo2 = true;
-    
+                $this->mostrarMensajeErrorTipo1 = true;
+                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
+
                 // Establece el intento de descarga
                 $this->intentoDescarga = true;
-    
+
                 // Retorna para no continuar con la descarga
                 return;
-                }
+            }
+
+            if (isset($fila['cbu'])) {
+                $cbu = $fila['cbu'];
+                    
+                // Obtener los primeros 8 dígitos
+                $primerBloque = substr($cbu, 0, 8);
+                    
+                // Obtener los siguientes 14 dígitos
+                $segundoBloque = substr($cbu, 8, 14);
+                    
+                // Modificar el primer número del segundo bloque a 2
+                $segundoBloque = '2' . substr($segundoBloque, 1);
+                    
+                // Modificar el segundo número del segundo bloque a 0
+                $segundoBloque = substr($segundoBloque, 0, 1) . '0' . substr($segundoBloque, 2);
+            } else {
+                $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
+                $this->mostrarMensajeError = true;
+                $this->mostrarMensajeErrorTipo1 = true;
+                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
+
+                // Establece el intento de descarga
+                $this->intentoDescarga = true;
+
+                // Retorna para no continuar con la descarga
+                return;
+            }
+
+            if (isset($fila['fecha_pago'])) {
+                $fechaPago = $fila['fecha_pago'];
+                $fechaSinBarras = str_replace('/', '', $fechaPago);
+   
+                // Utiliza DateTime para convertir la fecha
+                $fecha = DateTime::createFromFormat('dmY', $fechaSinBarras);
+   
+                // Formatea la fecha como deseas
+                $fechaFormateada = $fecha->format('Ymd');
+            } else {
+                $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
+                $this->mostrarMensajeError = true;
+                $this->mostrarMensajeErrorTipo1 = true;
+                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
+
+                // Establece el intento de descarga
+                $this->intentoDescarga = true;
+
+                // Retorna para no continuar con la descarga
+                return;
+            }
+               
+            if (isset($fila['numero_envio'])) {
+                $numeroEnvio = $fila['numero_envio'];
+                $numeroEnvioFormateado = str_pad($numeroEnvio, 6, '0', STR_PAD_LEFT);
+            } else {
+                $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
+                $this->mostrarMensajeError = true;
+                $this->mostrarMensajeErrorTipo1 = true;
+                $this->mostrarDatosFaltantesTipo1 = $this->datosFaltantesTipo1;
+
+                // Establece el intento de descarga
+                $this->intentoDescarga = true;
+
+                // Retorna para no continuar con la descarga
+                return;
+            }
+
+            // Formatea los campos según las longitudes
+            $contenido .=
+                $fila['tipo_registro'] .
+                $fila['cuit'] .
+                $cuentaSuc .
+                $segundoBloque .
+                $fila['moneda'] .
+                $fechaFormateada .
+                $fila['info_criterio_empresa'] .
+                $fila['tipo_pagos'] .
+                $fila['clase_pagos'] .
+                $fila['codigo_convenio'] .
+                $numeroEnvioFormateado .
+                $fila['sistema_original'] .
+                $fila['filler'] .
+                $fila['casa_envio_rendicion'] .
+                $fila['filler_100'] . "\n";
+            }
+            return $contenido;
+}
+    
+public function descargarDatosRegistroTipo2($indice)
+{
+    // Restablece la variable $intentoDescarga
+    $this->intentoDescarga = false;
+
+    // Verifica que haya datos cargados en datosProcesadosTipo2 y que el índice sea válido
+    if (count($this->datosProcesadosTipo2) > $indice) {
+        // Verifica que todos los campos necesarios estén presentes en al menos una fila
+        $camposNecesarios = ['tipo_registro', 'entidad_acreditar', 'sucursal', 'cbu', 'cuit', 'importe', 'identificacion_cliente', 'nro_documento', 'sucursal_acreditar'];
+
+        $datosFaltantes = [];
+
+        // Utiliza el índice $indice para acceder a los datos del cliente específico
+        $fila = $this->datosProcesadosTipo2[$indice];
+
+        foreach ($camposNecesarios as $campo) {
+            if (!isset($fila[$campo])) {
+                $datosFaltantes[] = $campo;
+            }
+        }
+
+        if (!empty($datosFaltantes)) {
+            // Al menos un campo necesario está faltante
+            $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
+            $this->mostrarMensajeError = true;
+            $this->mostrarMensajeErrorTipo2 = true;
+
+            // Establece el intento de descarga
+            $this->intentoDescarga = true;
+
+            // Retorna para no continuar con la descarga
+            return '';
+        }
+
+        // Genera el contenido del archivo TXT
+        $contenido = '';
+        $tipoRegistro = '2';
+
+        if (isset($fila['entidad_acreditar'])) {
+            $entidadAcreditar = $fila['entidad_acreditar'];
+            $entidad = str_pad($entidadAcreditar, 4, '0', STR_PAD_LEFT);
+        } else {
+            $this->mensajeError = '¡Faltan datos necesarios para descargar el archivo!';
+            $this->mostrarMensajeError = true;
+            $this->mostrarMensajeErrorTipo2 = true;
+
+            // Establece el intento de descarga
+            $this->intentoDescarga = true;
+
+            // Retorna para no continuar con la descarga
+            return $contenido;
+        }
 
                 if(isset($fila['sucursal_acreditar'])){
                     $sucursalAcreditar = $fila['sucursal_acreditar'];
@@ -1340,10 +1330,8 @@ public function datosNoEncontrados(){
                     'Content-Disposition' => 'attachment; filename=' . $nombreArchivo,
                 ]
             ); */
+            return $contenido;
         }
-        return $contenido;
-    }
-    
 
 public function descargarDatosRegistroTipo3()
 {

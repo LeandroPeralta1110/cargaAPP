@@ -74,7 +74,7 @@
                     @endif
     
                     @if ($seccionSeleccionada === 'alta_proveedor' && $datosNoEncontradosAltaProveedor)
-                        <li>Alta Proveedores:</li>
+                        <li><b>Alta Proveedores:</b></li>
                         <ul>
                             @foreach ($datosNoEncontradosAltaProveedor as $linea => $camposFaltantes)
                                 <li>Línea {{ $linea +2}}:
@@ -84,7 +84,7 @@
                                 </li>
                             @endforeach
                         </ul>
-                        <li>Registros tipo 1:</li>
+                        <li><b>Registros tipo 1:</b></li>
                         <ul>
                             @foreach ($datosFaltantesTipo1 as $linea => $camposFaltantes)
                                 <li>Línea {{ $linea }}:
@@ -94,7 +94,7 @@
                                 </li>
                             @endforeach
                         </ul>
-                        <li>Registros tipo 2:</li>
+                        <li><b>Registros tipo 2:</b></li>
                         <ul>
                             @foreach ($datosFaltantesTipo2 as $linea => $camposFaltantes)
                                 <li>Línea {{ $linea }}:
@@ -296,7 +296,7 @@
                                             </th>
                                             <th
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
-                                                FECHA DE PAGO
+                                                FECHA COMPENSACION
                                             </th>
                                             <th
                                                 class="px-2 py-3 bg-gray-300 text-left text-xs leading-4 font-medium text-gray-700 uppercase tracking-wider">
@@ -741,17 +741,26 @@
                 <h3 class="text-indigo-600">SECCION DE ALTA A PROVEEDORES</h3>
                 <div class="grid grid-cols-2 gap-8">
                     <!-- Sección izquierda para el formulario de carga de archivos -->
-                    <div class="fondocolor rounded-lg shadow-lg">
-                        <form wire:submit.prevent="procesarArchivosAltaProveedores">
-                            <div class="bg-gradient px-6 py-3 rounded-md">
-                                <h2 class="text-lg font-semibold">Archivo: </h2>
-                            </div>
-                            <input class="text-white p-4" type="file" wire:model="archivo">
-                            <button type="submit"
-                                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 m-4 rounded-md mt-4">Cargar
-                                Archivo</button>
-                        </form>
+                    <div class="relative">
+                        <div class="fondocolor rounded-lg shadow-lg">
+                            <form wire:submit.prevent="procesarArchivosAltaProveedores">
+                                <div class="bg-gradient px-6 py-3 rounded-md">
+                                    <h2 class="text-lg font-semibold">Archivo: </h2>
+                                </div>
+                                <input class="text-white p-4" type="file" wire:model="archivo">
+                                <button type="submit"
+                                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 m-4 rounded-md mt-4">Cargar
+                                    Archivo</button>
+                            </form>
+                        </div>
+                        <span wire:loading wire:target="archivo" class="absolute bottom-0 right-0 mb-2 mr-2">
+                            <span class="cargando-icono"></span>
+                        </span>
+                        <span wire:loading wire:target="procesarArchivosAltaProveedores" class="absolute bottom-0 right-0 mb-2 mr-2">
+                            <span class="cargando-icono"></span>
+                        </span>
                     </div>
+                    
 
                     <!-- Sección derecha para las instrucciones -->
                     <div class="fondocolor rounded-lg shadow-lg ">
