@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\clientController;
 use App\Http\Controllers\CrudClient as ControllersCrudClient;
+use App\Http\Controllers\pruebaController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Livewire\CargaArchivo;
 use App\Http\Livewire\Cobranzas;
@@ -22,13 +23,12 @@ Route::get('/cobranzas', Cobranzas::class)->name('cobranzas');
 Route::resource('clients', clientController::class);
 Auth::routes();
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
-use Illuminate\Support\Facades\DB;
 
-Route::get('/test-db-connection', function () {
+/* Route::get('/test-db-connection', function () {
     try {
         DB::connection()->getPdo();
         return "Conexión exitosa a la base de datos SQL Server.";
     } catch (\Exception $e) {
         return "Error de conexión: " . $e->getMessage();
     }
-}); 
+});  */

@@ -95,49 +95,36 @@
 
     </div>
 
-    <!-- Cuarto contenedor debajo de los primeros tres -->
+    <!-- Cuarto contenedor  -->
     <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 mt-5 overflow-hidden">
         <div class="bg-gradient text-white px-6 py-3 flex justify-between items-center">
             <h2 class="text-lg font-semibold">Contenido del Archivo</h2>
             @if($contenidoArchivo)
-                <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 m-4 rounded-md mt-4">
-                    Subir a Bejerman
+                <button wire:click="descargarArchivoTxt" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 m-4 rounded-md mt-4">
+                    Descargar Archivo
                 </button>
             @endif
-        </div>               
+        </div>        
         <div class="max-h-400px overflow-y-auto">
             <table class="min-w-full table-auto">
                 <thead>
                     <tr class="bg-gray-100">
-                        <th class="border p-3 text-left">Serv.</th>
-                        <th class="border p-3 text-left">Impacta</th>
-                        <th class="border p-3 text-left">Cliente</th>
-                        <th class="border p-3 text-left">Subscripcion</th>
                         <th class="border p-3 text-left">Operacion</th>
+                        <th class="border p-3 text-left">Impacta</th>
                         <th class="border p-3 text-left">Importe</th>
-                        <th class="border p-3 text-left">Pago</th>
-                        <th class="border p-3 text-left">ID</th>
-                        <th class="border p-3 text-left">Razon Social</th>
+                        <th class="border p-3 text-left">DNI</th>
+                        {{-- Otros campos según sea necesario --}}
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($contenidoArchivo as $linea)
-                        {{-- Verificar si la operación está en datos duplicados --}}
-                        @if(isset($datosDuplicados[$linea['OPERACIÓN']]))
-                            <tr class="bg-red-200">
-                        @else
-                            <tr class="{{ $loop->odd ? 'bg-gray-50' : 'bg-white' }}">
-                        @endif
-                            <td class="border p-3">{{$linea['SERV.'] }}</td>
-                            <td class="border p-3">{{ \Carbon\Carbon::parse($linea['IMPACTA'])->format('d/m/Y') }}</td>
-                            <td class="border p-3">{{ $linea['CLIENTE'] }}</td>
-                            <td class="border p-3">{{ $linea['SUSCRIPCION'] }}</td>
+                        <tr class="bg-gray-100">
                             <td class="border p-3">{{ $linea['OPERACIÓN'] }}</td>
+                            <td class="border p-3">{{ \Carbon\Carbon::parse($linea['IMPACTA'])->format('d/m/Y') }}</td>
                             <td class="border p-3">{{ $linea['IMPORTE'] }}</td>
-                            <td class="border p-3">{{ \Carbon\Carbon::parse($linea['PAGO'])->format('d/m/Y') }}</td>
-                            {{-- Añadir las siguientes dos líneas para mostrar ID y Razón Social --}}
-                            <td class="border p-3">{{ $linea['ID'] ?? '' }}</td>
-                            <td class="border p-3">{{ $linea['RAZON SOCIAL'] ?? '' }}</td>
+                            {{-- Mostrar el campo 'CUIT' obtenido de la base de datos --}}
+                            <td class="border p-3">{{ $linea['CUIT'] }}</td>
+                            {{-- Otros campos según sea necesario --}}
                         </tr>
                     @endforeach
                 </tbody>
@@ -145,7 +132,7 @@
         </div>
     </div>
     
-    <div x-data="{ sidebarOpen: false }">
+   {{--  <div x-data="{ sidebarOpen: false }">
         <!-- Botón de la barra lateral -->
         <button @click="sidebarOpen = !sidebarOpen" class="fixed top-1/2 right-0 transform -translate-y-1/2 m-4 p-2 bg-blue-500 text-white rounded-full">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -167,5 +154,5 @@
                 <button @click="sidebarOpen = false" class="bg-red-500 text-white px-4 py-2 rounded-md">Cerrar</button>
             </div>
         </div>
-    </div>
+    </div> --}}
 </div>

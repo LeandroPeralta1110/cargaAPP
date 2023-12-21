@@ -5,12 +5,13 @@ namespace App\Http\Livewire;
 use Illuminate\Support\Facades\Date;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use PhpOffice\PhpSpreadsheet\IOFactory; // Importar la clase IOFactory
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use Illuminate\Support\Carbon;
 use App\Models\client;
+use Illuminate\Support\Facades\DB;
 
 class Cobranzas extends Component
 {
@@ -24,52 +25,51 @@ class Cobranzas extends Component
     public $porPagina = 20;
 
     public function cargarArchivo()
-{
-    $this->validate([
-        'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
-    ]);
+    {
+        $this->validate([
+            'archivo' => 'required|mimes:csv,txt,xlsx|max:2048',
+        ]);
 
-    // Verificar si se ha seleccionado un archivo
-    if ($this->archivo) {
-        // Obtener la extensión del archivo
-        $extension = $this->archivo->getClientOriginalExtension();
-        // Procesar el contenido del archivo según la extensión
-        if ($extension === 'xlsx' || $extension === 'xls') {
-            // Para archivos Excel
-            $this->contenidoArchivo = $this->procesarArchivoExcel();
-        } else {
-            // Para archivos CSV
-            $this->contenidoArchivo = $this->procesarArchivoCSV();
-           
+        // Verificar si se ha seleccionado un archivo
+        if ($this->archivo) {
+            // Obtener la extensión del archivo
+            $extension = $this->archivo->getClientOriginalExtension();
+            // Procesar el contenido del archivo según la extensión
+            if ($extension === 'xlsx' || $extension === 'xls') {
+                // Para archivos Excel
+                $this->contenidoArchivo = $this->procesarArchivoExcel();
+            } else {
+                // Para archivos CSV
+                $this->contenidoArchivo = $this->procesarArchivoCSV();
+            
+            }
+            /* // Detectar y almacenar datos duplicados
+            $datosDuplicados = $this->detectarDatosDuplicados($this->contenidoArchivo);
+
+            // Obtener correos electrónicos del archivo
+            $correosArchivo = array_column($this->contenidoArchivo, 'Cliente');
+
+            // Obtener clientes que tienen correos electrónicos en la lista
+            $clientesEncontrados = Client::whereIn('email', $correosArchivo)->pluck('email')->toArray();
+
+            // Obtener clientes no encontrados
+            $clientesNoEncontrados = array_diff($correosArchivo, $clientesEncontrados);
+
+            // Filtrar los emails duplicados para mostrar solo uno por cliente
+            $clientesNoEncontrados = array_unique($clientesNoEncontrados);
+
+            // Almacenar clientes no encontrados en una variable de componente
+            $this->clientesNoEncontrados = $clientesNoEncontrados; */
+
+            // Otra lógica que necesites hacer después de procesar el archivo
+
+            // Emitir un mensaje de éxito (opcional)
+            $this->emit('archivoProcesado', 'El archivo se ha procesado correctamente.');
+
+            // Almacenar datos duplicados en una variable de componente
+            /* $this->datosDuplicados = $datosDuplicados; */
         }
-
-        /* // Detectar y almacenar datos duplicados
-        $datosDuplicados = $this->detectarDatosDuplicados($this->contenidoArchivo);
-
-        // Obtener correos electrónicos del archivo
-        $correosArchivo = array_column($this->contenidoArchivo, 'Cliente');
-
-        // Obtener clientes que tienen correos electrónicos en la lista
-        $clientesEncontrados = Client::whereIn('email', $correosArchivo)->pluck('email')->toArray();
-
-        // Obtener clientes no encontrados
-        $clientesNoEncontrados = array_diff($correosArchivo, $clientesEncontrados);
-
-        // Filtrar los emails duplicados para mostrar solo uno por cliente
-        $clientesNoEncontrados = array_unique($clientesNoEncontrados);
-
-        // Almacenar clientes no encontrados en una variable de componente
-        $this->clientesNoEncontrados = $clientesNoEncontrados; */
-
-        // Otra lógica que necesites hacer después de procesar el archivo
-
-        // Emitir un mensaje de éxito (opcional)
-        $this->emit('archivoProcesado', 'El archivo se ha procesado correctamente.');
-
-        // Almacenar datos duplicados en una variable de componente
-        /* $this->datosDuplicados = $datosDuplicados; */
     }
-}
 
     /* protected function detectarDatosDuplicados($contenido)
     {
@@ -119,6 +119,7 @@ protected function procesarArchivoExcel()
 
     // Obtener las filas como un array asociativo
     $contenido = [];
+    $datos = [];
     $encabezados = [];
 
     foreach ($sheet->getRowIterator() as $row) {
@@ -126,7 +127,6 @@ protected function procesarArchivoExcel()
         $cellIterator->setIterateOnlyExistingCells(FALSE); // Permitir celdas vacías
     
         $rowContent = [];
-    
         foreach ($cellIterator as $index => $cell) {
             // Obtener el valor formateado de la celda
             $cellValue = $cell->getFormattedValue();
@@ -150,24 +150,48 @@ protected function procesarArchivoExcel()
                     if ($currentHeader === 'IMPORTE') {
                         $rowContent[$currentHeader] = str_replace('$ ', '', $cellValue);
                     }
+                     // Obtener ID de cliente de la columna 'ID'
+                     if ($currentHeader === 'ID') {
+                        $idCliente = $cellValue;
+                        $idCliente = str_pad($cellValue, 6, '0', STR_PAD_LEFT);
+
+                        // Realizar la consulta a la base de datos
+                        $clienteCollection = $this->consultarBase($idCliente);
+
+                        // Obtener el primer elemento de la colección (Illuminate\Support\Collection)
+                        $cliente = $clienteCollection->first();
+
+                        // Verificar si se encontró un cliente antes de asignar valores
+                        if ($cliente) {
+                            // Agregar los datos del cliente al array $rowContent
+                            $rowContent = array_merge($rowContent, [
+                                'CUIT' => $cliente->cli_CUIT,
+                                // Otros campos según sea necesario
+                            ]);
+                        }
+                    }
                 }
             }
         }
-    
         // Agregar la fila solo si no es la primera fila (encabezados)
         if ($row->getRowIndex() > 1 && !empty(array_filter($rowContent))) {
             // Buscar el cliente correspondiente en el array de clientesEncontrados
             $cliente = collect($this->clientesEncontrados)->where('email', $rowContent['CLIENTE'])->first();
-    
+            
             // Verificar si se encontró un cliente antes de asignar valores
             $idCliente = optional($cliente)->id;
+            
             $razonSocialCliente = optional($cliente)->razon_social;
-    
+            
             $contenido[] = array_merge($rowContent);
         }
-    }    
-
+    }   
     return $contenido;
+}
+
+public function consultarBase($id){
+    $query=DB::table('clientes')->where('cli_Cod','=',$id)->get();
+    return $query;
 }
 
     /* public function guardarCliente($email)
@@ -247,6 +271,67 @@ protected function procesarArchivoExcel()
 
     return $resultados;
 }
+
+public function descargarArchivoTxt()
+{
+    // Guardar la configuración regional actual
+    $configuracionRegionalActual = localeconv();
+
+    // Establecer la configuración regional a una que utilice el punto como separador decimal
+    setlocale(LC_NUMERIC, 'en_US.utf8');
+
+    // Generar el contenido del archivo TXT
+    $contenidoTxt = "";
+    $espaciosEntreCuitYImpacta = str_repeat(' ', 23);
+    $espaciosImporte = str_repeat(' ', 199);
+
+    foreach ($this->contenidoArchivo as $linea) {
+        // Formatear OPERACION con una longitud de 24
+        $operacion = str_pad($linea['OPERACIÓN'], 24, ' ');
+        $id = $linea['ID'];
+        $id = str_pad($id,'11',' ',STR_PAD_LEFT);
+
+        // Formatear IMPACTA con una longitud de 8 (formato aaaammdd)
+        $impacta = \Carbon\Carbon::parse($linea['IMPACTA'])->format('Ymd');
+        $impacta = str_pad($impacta, 8, ' ');
+
+        // Convertir IMPORTE a un número de punto flotante
+        $importe = floatval(str_replace(',', '.', str_replace('.', '', $linea['IMPORTE'])));
+
+        // Formatear IMPORTE con una longitud de 16 y completar con 0 a la izquierda
+        $importe = number_format($importe, 2, '.', '');
+        $importe = str_pad($importe, 16, '0', STR_PAD_LEFT);
+
+        // Formatear CUIT con una longitud de 11
+        $cuit = str_pad($linea['CUIT'], 11, ' ');
+
+        $contenidoTxt .= "{$operacion}{$impacta}{$cuit}{$espaciosEntreCuitYImpacta}{$impacta}{$importe}{$id}{$espaciosImporte}{$importe}\r\n";
+    }
+
+      // Convertir el contenido a la codificación de caracteres ANSI
+      /* $contenidoTxt = iconv('UTF-8', 'Windows-1252', $contenidoTxt); */
+    $contenidoTxt = mb_convert_encoding($contenidoTxt, 'Windows-1252', 'UTF-8');
+
+      // Agregar BOM al inicio del archivo
+      /* $bom = "\xEF\xBB\xBF";
+      $contenidoTxt = $bom . $contenidoTxt; */
+  
+      // Definir el nombre del archivo
+      $nombreArchivo = 'contenido_archivo.txt';
+  
+      // Almacenar el contenido en un archivo temporal
+      $rutaTemporal = tempnam(sys_get_temp_dir(), 'archivo_txt_temp');
+      file_put_contents($rutaTemporal, $contenidoTxt);
+  
+      // Descargar el archivo con las cabeceras adecuadas
+      return response()
+          ->download($rutaTemporal, $nombreArchivo, [
+              'Content-Type' => 'text/plain; charset=Windows-1252',
+              'Content-Disposition' => 'attachment; filename=' . $nombreArchivo,
+              'Content-Transfer-Encoding' => 'binary',
+          ])
+          ->deleteFileAfterSend();
+  }
 
     public function render()
     {
