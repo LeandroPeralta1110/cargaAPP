@@ -23,6 +23,8 @@ Route::get('/cobranzas', Cobranzas::class)->name('cobranzas');
 Route::resource('clients', clientController::class);
 Auth::routes();
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+Route::get('/base', [Cobranzas::class, 'index']);
+
 
 /* Route::get('/test-db-connection', function () {
     try {

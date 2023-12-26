@@ -21,7 +21,7 @@
     <!-- Aquí va el contenido principal -->
 
     @if($registrosArchivos)
-    <div class="mr-3 w-2/12 p-4 bg-gray-200 rounded-2xl" style="position: absolute; right: 0; top: 48%; height: 500px;">
+    <div class=" w-2/12 mr-3 p-4 bg-gray-200 rounded-2xl fixed top-48 right-0" style="position: absolute; right: 0; top: 48%; height: 500px;">
         <div class="bg-gray-200 px-4 py-3 rounded-md">
             <h2 class="text-lg font-semibold">Archivos Registrados:</h2>
         </div>
@@ -189,7 +189,7 @@
         @endif
     </div>
 
-    <div class="w-full max-w-screen-lg p-6">
+    <div class="w-full max-w-screen-lg p-8">
             
             {{-- <!-- Botón para la sección "Archivo de Pago" -->
             <div class="items-center ">
@@ -741,7 +741,7 @@
                 <h3 class="text-indigo-600">SECCION DE ALTA A PROVEEDORES</h3>
                 <div class="grid grid-cols-2 gap-8">
                     <!-- Sección izquierda para el formulario de carga de archivos -->
-                    <div class="relative">
+                    <div class="relative mr-3">
                         <div class="fondocolor rounded-lg shadow-lg">
                             <form wire:submit.prevent="procesarArchivosAltaProveedores">
                                 <div class="bg-gradient px-6 py-3 rounded-md">
