@@ -27,11 +27,10 @@ class Cobranzas extends Component
 
     public function index(){
     return DB::table('dbo.QRY_VENTASCOBROS')
-    ->where('CLI_CUIT', '=', '94485484')
+    ->where('CLI_CUIT', '=', '29053784')
     ->select(['CLI_CUIT', 'IdentComp', 'CVE_FCONTAB', 'CLI_RAZSOC', 'SCV_ESTADO', 'TAL_DESC'])
     ->orderBy('CVE_FCONTAB', 'asc')
     ->get();
-
 
     return view('dashboard'/* , ['datosVentasCobros' => $datosVentasCobros] */);
     }
@@ -133,6 +132,7 @@ class Cobranzas extends Component
         $contenido = [];
         $datos = [];
         $encabezados = [];
+        $ultimasFacturas = [];
 
         foreach ($sheet->getRowIterator() as $row) {
             $cellIterator = $row->getCellIterator();
@@ -169,9 +169,19 @@ class Cobranzas extends Component
                         
                             // Realizar la consulta a la base de datos
                             $clienteCollection = $this->consultarBase($idCliente);
-                        
                             // Obtener el primer elemento de la colección (Illuminate\Support\Collection)
                             $cliente = $clienteCollection->first();
+
+                            $ultimaFacturaCliente = DB::table('dbo.QRY_VENTASCOBROS')
+                            ->select('CVE_FCONTAB', 'IdentComp')
+                            ->where('CLI_CUIT', $cliente->cli_CUIT)
+                            ->where('IdentComp', 'like', 'FC B%')
+                            ->orderBy('CVE_FCONTAB', 'desc')
+                            ->first();
+
+                            $ultimaFacturaFecha = optional($ultimaFacturaCliente)->CVE_FCONTAB;
+                            $ultimaFacturaIdentComp = optional($ultimaFacturaCliente)->IdentComp;
+
                             /* dd($cliente); */
                             // Verificar si se encontró un cliente antes de asignar valores
                             if ($cliente) {
@@ -192,6 +202,8 @@ class Cobranzas extends Component
                                     'RSOC' => $cliente->cli_RazSoc, 
                                     'DIRECCION' => $direccion,
                                     'LOCALIDAD' => $localidad,
+                                    'ULTIMA_FACTURA' => $ultimaFacturaFecha,
+                                    'ULTIMA_FACTURA_IDENTCOMP' => $ultimaFacturaIdentComp,
                                     // Otros campos según sea necesario
                                 ]);
                             }
@@ -211,7 +223,8 @@ class Cobranzas extends Component
                 
                 $contenido[] = array_merge($rowContent);
             }
-        }   
+        }  
+        
         return $contenido;
     }
 
@@ -329,7 +342,6 @@ class Cobranzas extends Component
             ])
             ->deleteFileAfterSend();
     }
-    
 
     // Función para generar contenido del primer archivo
     private function generarContenidoArchivo1()
@@ -425,15 +437,20 @@ class Cobranzas extends Component
         foreach ($this->contenidoArchivo as $linea) {
             $operacion = 'RBCX0' . $linea['OPERACIÓN'];
             $impacta = \Carbon\Carbon::parse($linea['IMPACTA'])->format('Ymd');
+            $impacta2 = str_pad($impacta,'12',' ',STR_PAD_RIGHT);
             $id = $linea['ID'];
             $id = str_pad($id, '6', '0', STR_PAD_LEFT);
-            $fc = str_pad(' ',28,' ',STR_PAD_RIGHT);
             $importe = floatval(str_replace(',', '.', str_replace('.', '', $linea['IMPORTE'])));
             // Formatear IMPORTE con una longitud de 16 y completar con 0 a la izquierda
             $importe = number_format($importe, 2, '.', '');
             $importe = str_pad($importe, 15, '0', STR_PAD_LEFT);
+            $factura = $linea['ULTIMA_FACTURA_IDENTCOMP'];
+            $factura = str_replace([' ', '-'], '', $factura);
+            $factura = substr($factura, 0, 2) . ' ' . substr($factura, 2);
+            /* $factura = str_pad($factura,28,' ',STR_PAD_RIGHT); */
+            $dAct = Carbon::now()->format('Ymd');
 
-            $contenidoTxt .= "{$operacion}{$impacta}{$esp4}{$impacta}{$id}{$fc}{$impacta}{$importe}\r\n";
+            $contenidoTxt .= "{$operacion}{$impacta}{$esp4}{$impacta}{$id}{$factura}{$impacta2}{$dAct}{$importe}\r\n";
         }
         return $contenidoTxt;
     }

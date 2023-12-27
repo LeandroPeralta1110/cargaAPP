@@ -109,25 +109,27 @@
             <table class="min-w-full table-auto">
                 <thead>
                     <tr class="bg-gray-100">
+                        <th class="border p-3 text-left">Razon Social</th>
+                        <th class="border p-3 text-left">DNI</th>
                         <th class="border p-3 text-left">Operacion</th>
                         <th class="border p-3 text-left">Impacta</th>
                         <th class="border p-3 text-left">Importe</th>
-                        <th class="border p-3 text-left">DNI</th>
                         {{-- Otros campos según sea necesario --}}
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($contenidoArchivo as $linea)
-                        <tr class="bg-gray-100">
+                    @foreach($contenidoArchivo as $index => $linea)
+                        <tr class="{{ $index % 2 === 0 ? 'bg-gray-100' : 'bg-white' }}">
+                            <td class="border p-3 w-1/4">{{ $linea['RSOC'] }}</td>
+                            <td class="border p-3">{{ $linea['CUIT'] }}</td>
                             <td class="border p-3">{{ $linea['OPERACIÓN'] }}</td>
                             <td class="border p-3">{{ \Carbon\Carbon::parse($linea['IMPACTA'])->format('d/m/Y') }}</td>
                             <td class="border p-3">{{ $linea['IMPORTE'] }}</td>
                             {{-- Mostrar el campo 'CUIT' obtenido de la base de datos --}}
-                            <td class="border p-3">{{ $linea['CUIT'] }}</td>
                             {{-- Otros campos según sea necesario --}}
                         </tr>
                     @endforeach
-                </tbody>
+                </tbody>                
             </table>
         </div>
     </div>
