@@ -27,7 +27,7 @@ class Cobranzas extends Component
 
     public function index(){
     return DB::table('dbo.QRY_VENTASCOBROS')
-    ->where('CLI_CUIT', '=', '29053784')
+    ->where('CLI_CUIT', '=', '95961864')
     ->select(['CLI_CUIT', 'IdentComp', 'CVE_FCONTAB', 'CLI_RAZSOC', 'SCV_ESTADO', 'TAL_DESC'])
     ->orderBy('CVE_FCONTAB', 'asc')
     ->get();
@@ -204,7 +204,6 @@ class Cobranzas extends Component
                                     'LOCALIDAD' => $localidad,
                                     'ULTIMA_FACTURA' => $ultimaFacturaFecha,
                                     'ULTIMA_FACTURA_IDENTCOMP' => $ultimaFacturaIdentComp,
-                                    // Otros campos según sea necesario
                                 ]);
                             }
                         }
@@ -360,7 +359,7 @@ class Cobranzas extends Component
 
         foreach ($this->contenidoArchivo as $linea) {
             // Formatear OPERACION con una longitud de 24
-            $operacion = 'RBCX0' . str_pad($linea['OPERACIÓN'], 19, ' ');
+            $operacion = 'RC   ' . str_pad($linea['OPERACIÓN'], 19, ' ');
             $id = $linea['ID'];
             $id = str_pad($id, '7', '0', STR_PAD_LEFT) . '1';
 
@@ -411,7 +410,7 @@ class Cobranzas extends Component
         setlocale(LC_NUMERIC, 'en_US.utf8');
 
         foreach ($this->contenidoArchivo as $linea) {
-            $operacion = 'RBCX0' . $linea['OPERACIÓN'];
+            $operacion = 'RC   ' . $linea['OPERACIÓN'];
             $impacta = \Carbon\Carbon::parse($linea['IMPACTA'])->format('Ymd');
             $id = $linea['ID'];
             $id = str_pad($id, '6', '0', STR_PAD_LEFT);
@@ -435,7 +434,7 @@ class Cobranzas extends Component
         $esp4 = str_repeat(' ', 4);
 
         foreach ($this->contenidoArchivo as $linea) {
-            $operacion = 'RBCX0' . $linea['OPERACIÓN'];
+            $operacion = 'RC   ' . $linea['OPERACIÓN'];
             $impacta = \Carbon\Carbon::parse($linea['IMPACTA'])->format('Ymd');
             $impacta2 = str_pad($impacta,'12',' ',STR_PAD_RIGHT);
             $id = $linea['ID'];
@@ -450,7 +449,7 @@ class Cobranzas extends Component
             /* $factura = str_pad($factura,28,' ',STR_PAD_RIGHT); */
             $dAct = Carbon::now()->format('Ymd');
 
-            $contenidoTxt .= "{$operacion}{$impacta}{$esp4}{$impacta}{$id}{$factura}{$impacta2}{$dAct}{$importe}\r\n";
+            $contenidoTxt .= "{$operacion}{$impacta}{$esp4}{$impacta}{$id}{$factura}{$impacta2}{$impacta}{$importe}\r\n";
         }
         return $contenidoTxt;
     }
