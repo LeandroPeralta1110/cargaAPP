@@ -27,7 +27,7 @@ class Cobranzas extends Component
 
     public function index(){
     return DB::table('dbo.QRY_VENTASCOBROS')
-    ->where('CLI_CUIT', '=', '95961864')
+    ->where('CLI_CUIT', '=', '30717799794')
     ->select(['CLI_CUIT', 'IdentComp', 'CVE_FCONTAB', 'CLI_RAZSOC', 'SCV_ESTADO', 'TAL_DESC'])
     ->orderBy('CVE_FCONTAB', 'asc')
     ->get();
@@ -133,6 +133,7 @@ class Cobranzas extends Component
         $datos = [];
         $encabezados = [];
         $ultimasFacturas = [];
+        $ultimoNumeroReciboPorCliente = [];
 
         foreach ($sheet->getRowIterator() as $row) {
             $cellIterator = $row->getCellIterator();
@@ -172,19 +173,42 @@ class Cobranzas extends Component
                             // Obtener el primer elemento de la colección (Illuminate\Support\Collection)
                             $cliente = $clienteCollection->first();
 
-                            $ultimaFacturaCliente = DB::table('dbo.QRY_VENTASCOBROS')
-                            ->select('CVE_FCONTAB', 'IdentComp')
-                            ->where('CLI_CUIT', $cliente->cli_CUIT)
-                            ->where('IdentComp', 'like', 'FC B%')
-                            ->orderBy('CVE_FCONTAB', 'desc')
-                            ->first();
-
-                            $ultimaFacturaFecha = optional($ultimaFacturaCliente)->CVE_FCONTAB;
-                            $ultimaFacturaIdentComp = optional($ultimaFacturaCliente)->IdentComp;
-
+                            
                             /* dd($cliente); */
                             // Verificar si se encontró un cliente antes de asignar valores
                             if ($cliente) {
+                                $ultimaReciboCliente = DB::table('dbo.QRY_VENTASCOBROS')
+                                ->select('CVE_FCONTAB', 'IdentComp')
+                                ->where('CLI_CUIT', $cliente->cli_CUIT)
+                                ->where('IdentComp', 'like', 'RC%')
+                                ->orderBy('CVE_FCONTAB', 'desc')
+                                ->first();
+
+                                $ultimaFacturaCliente = DB::table('dbo.QRY_VENTASCOBROS')
+                                ->select('CVE_FCONTAB', 'IdentComp')
+                                ->where('CLI_CUIT', $cliente->cli_CUIT)
+                                ->where('IdentComp', 'like', 'FC%')
+                                ->orderBy('CVE_FCONTAB', 'desc')
+                                ->first();
+
+                                $ultimoReciboFecha = optional($ultimaFacturaCliente)->CVE_FCONTAB;
+                                $ultimoRecibo = optional($ultimaFacturaCliente)->IdentComp;
+    
+                            if ($ultimaReciboCliente) {
+                                // Obtener los números actuales
+                                $primerosNumeros = substr($ultimaReciboCliente->IdentComp, 3, 5);
+                                $ultimosNumeros = substr($ultimaReciboCliente->IdentComp, 11, 8);
+    
+                                // Incrementar el número de los últimos dígitos
+                                $nuevoNumero = intval($ultimosNumeros);
+    
+                                // Formar el nuevo IdentComp
+                                $nuevoIdentComp = 'RC ' . $primerosNumeros . '-' . str_pad($nuevoNumero, 8, '0', STR_PAD_LEFT);
+    
+                                // Utilizar $nuevoIdentComp como sea necesario
+                                $ultimaFacturaFecha = optional($ultimaReciboCliente)->CVE_FCONTAB;
+                                $ultimaFacturaIdentComp = $nuevoIdentComp;
+                            } 
                                 // Obtener la dirección y la localidad del cliente
                                 $direccion = $cliente->cli_Direc;
                                 $localidad = $cliente->cli_Loc;
@@ -203,7 +227,8 @@ class Cobranzas extends Component
                                     'DIRECCION' => $direccion,
                                     'LOCALIDAD' => $localidad,
                                     'ULTIMA_FACTURA' => $ultimaFacturaFecha,
-                                    'ULTIMA_FACTURA_IDENTCOMP' => $ultimaFacturaIdentComp,
+                                    'ULTIMO_RECIBO_IDENTCOMP' => $ultimaFacturaIdentComp,
+                                    'ULTIMA_FACTURA_IDENTCOMP' => $ultimoRecibo,
                                 ]);
                             }
                         }
@@ -223,7 +248,6 @@ class Cobranzas extends Component
                 $contenido[] = array_merge($rowContent);
             }
         }  
-        
         return $contenido;
     }
 
@@ -319,15 +343,15 @@ class Cobranzas extends Component
         // Llamar a funciones para generar contenido y agregarlo al ZIP
         $archivo1Contenido = $this->generarContenidoArchivo1();
         $archivo1Contenido = iconv("UTF-8", "Windows-1252", $archivo1Contenido);
-        $this->agregarArchivoAlZip($zip, $archivo1Contenido, 'archivoPago.txt');
+        $this->agregarArchivoAlZip($zip, $archivo1Contenido, 'VMedPago.txt');
     
         $archivo2Contenido = $this->generarContenidoArchivo2();
         $archivo2Contenido = iconv("UTF-8", "Windows-1252", $archivo2Contenido);
-        $this->agregarArchivoAlZip($zip, $archivo2Contenido, 'archivoCabecera.txt');
+        $this->agregarArchivoAlZip($zip, $archivo2Contenido, 'VCabecer.txt');
     
         $archivo3Contenido = $this->generarContenidoArchivo3();
         $archivo3Contenido = iconv("UTF-8", "Windows-1252", $archivo3Contenido);
-        $this->agregarArchivoAlZip($zip, $archivo3Contenido, 'archivoRelacCo.txt');
+        $this->agregarArchivoAlZip($zip, $archivo3Contenido, 'VRelacCo.txt');
     
         // Cerrar el ZIP después de agregar todos los archivos
         $zip->close();
@@ -354,12 +378,15 @@ class Cobranzas extends Component
         // Generar el contenido del archivo TXT
         $contenidoTxt = "";
         $espaciosEntreCuitYImpacta = str_repeat(' ', 18);
+        $esp8 = str_repeat(' ', 8);
         $espaciosImporte = str_repeat(' ', 202);
         $uni = str_pad('UNI', '5', ' ', STR_PAD_LEFT);
 
         foreach ($this->contenidoArchivo as $linea) {
             // Formatear OPERACION con una longitud de 24
-            $operacion = 'RC   ' . str_pad($linea['OPERACIÓN'], 19, ' ');
+            /* $operacion = 'RC   ' . str_pad($linea['ULTIMA_FACTURA_IDENTCOMP'], 19, ' '); */
+            $operacion = $linea['ULTIMO_RECIBO_IDENTCOMP'];
+            $operacion = str_replace('-', '', $operacion);
             $id = $linea['ID'];
             $id = str_pad($id, '7', '0', STR_PAD_LEFT) . '1';
 
@@ -377,12 +404,11 @@ class Cobranzas extends Component
             // Formatear CUIT con una longitud de 11
             $cuit = str_pad($linea['CUIT'], 8, ' ');
 
-            $contenidoTxt .= "{$operacion}{$impacta}{$id}{$uni}{$espaciosEntreCuitYImpacta}{$impacta}{$importe}{$espaciosImporte}{$importe}\r\n";
+            $contenidoTxt .= "{$operacion}{$esp8}{$impacta}{$id}{$uni}{$espaciosEntreCuitYImpacta}{$impacta}{$importe}{$espaciosImporte}{$importe}\r\n";
         }
 
         // Convertir el contenido a la codificación de caracteres ANSI
         $contenidoTxt = mb_convert_encoding($contenidoTxt, 'Windows-1252', 'UTF-8');
-
         return $contenidoTxt;
     }
 
@@ -410,13 +436,15 @@ class Cobranzas extends Component
         setlocale(LC_NUMERIC, 'en_US.utf8');
 
         foreach ($this->contenidoArchivo as $linea) {
-            $operacion = 'RC   ' . $linea['OPERACIÓN'];
+            $operacion = $linea['ULTIMO_RECIBO_IDENTCOMP'];
+            $operacion = str_replace('-', '', $operacion);
             $impacta = \Carbon\Carbon::parse($linea['IMPACTA'])->format('Ymd');
             $id = $linea['ID'];
             $id = str_pad($id, '6', '0', STR_PAD_LEFT);
             $rsoc= str_pad($linea['RSOC'],41,' ', STR_PAD_RIGHT);
             $direccion = str_pad($linea['DIRECCION'],38,' ', STR_PAD_RIGHT);
             $localidad = str_pad($linea['LOCALIDAD'],70,' ', STR_PAD_RIGHT);
+            $zona= $linea['LOCALIDAD'] == 'CABA'? '11': '21';
             // Formatear IMPACTA con una longitud de 8 (formato aaaammdd)
             // Convertir IMPORTE a un número de punto flotante
             // Convertir IMPORTE a un número de punto flotante
@@ -424,7 +452,8 @@ class Cobranzas extends Component
             // Formatear IMPORTE con una longitud de 16 y completar con 0 a la izquierda
             $importe = number_format($importe, 2, '.', '');
             $importe = str_pad($importe, 15, '0', STR_PAD_LEFT);
-            $contenidoTxt .= "{$operacion}{$esp8}{$impacta}{$id}{$rsoc}{$dig}{$esp2}{$ceros}{$esp14}{$ceros5}{$esp4}{$ceros4}{$esp7}{$impacta}{$guion}{$importe}{$esp6}{$cod}{$direccion}{$localidad}{$s}{$ceros40}{$esp23}\r\n";
+            $cuit =  $zona . str_pad($linea['CUIT'],'11','0', STR_PAD_LEFT);
+            $contenidoTxt .= "{$operacion}{$esp8}{$impacta}{$id}{$rsoc}{$dig}{$esp2}{$cuit}{$esp14}{$ceros5}{$esp4}{$ceros4}{$esp7}{$impacta}{$guion}{$importe}{$esp6}{$cod}{$direccion}{$localidad}{$s}{$ceros40}{$esp23}\r\n";
         }
         return $contenidoTxt;
     }
@@ -434,7 +463,15 @@ class Cobranzas extends Component
         $esp4 = str_repeat(' ', 4);
 
         foreach ($this->contenidoArchivo as $linea) {
-            $operacion = 'RC   ' . $linea['OPERACIÓN'];
+            $operacion = $linea['ULTIMO_RECIBO_IDENTCOMP'];
+            $operacion = str_replace('-', '', $operacion);
+            $fc = $linea['ULTIMA_FACTURA_IDENTCOMP'];
+            $fc = str_replace('-', '', $fc);
+            $fc = preg_replace('/(?<=A)\s/', '', str_replace(['FCA', ' A'], ['FC A', ' A'], $fc));
+            $fc = preg_replace('/(?<=B)\s/', '', str_replace(['FCB', ' B'], ['FC B', ' B'], $fc));
+            if(empty($fc)){
+                $fc= str_repeat(' ',17);
+            }
             $impacta = \Carbon\Carbon::parse($linea['IMPACTA'])->format('Ymd');
             $impacta2 = str_pad($impacta,'12',' ',STR_PAD_RIGHT);
             $id = $linea['ID'];
@@ -443,13 +480,13 @@ class Cobranzas extends Component
             // Formatear IMPORTE con una longitud de 16 y completar con 0 a la izquierda
             $importe = number_format($importe, 2, '.', '');
             $importe = str_pad($importe, 15, '0', STR_PAD_LEFT);
-            $factura = $linea['ULTIMA_FACTURA_IDENTCOMP'];
+            /* $factura = $linea['ULTIMO_RECIBO_IDENTCOMP'];
             $factura = str_replace([' ', '-'], '', $factura);
-            $factura = substr($factura, 0, 2) . ' ' . substr($factura, 2);
+            $factura = substr($factura, 0, 2) . ' ' . substr($factura, 2); */
             /* $factura = str_pad($factura,28,' ',STR_PAD_RIGHT); */
             $dAct = Carbon::now()->format('Ymd');
 
-            $contenidoTxt .= "{$operacion}{$impacta}{$esp4}{$impacta}{$id}{$factura}{$impacta2}{$impacta}{$importe}\r\n";
+            $contenidoTxt .= "{$operacion}{$impacta}{$esp4}{$impacta}{$id}{$fc}{$impacta2}{$impacta}{$importe}\r\n";
         }
         return $contenidoTxt;
     }

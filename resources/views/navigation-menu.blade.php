@@ -1,4 +1,4 @@
-<div class="relative bg-white">
+<div class="sticky top-0 relative bg-white">
     <!-- Contenido del encabezado -->
     <header class="mx-auto px-4 py-1 flex items-center shadow-lg" style="background-color: rgba(255, 255, 255, 0.9);">
         <img src="{{ asset('images/LogoIvess-2.gif') }}" alt="Logo Ivess" class="mr-2 border-r-2 border-indigo-600 pr-4 -mt-3">

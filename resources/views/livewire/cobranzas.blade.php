@@ -1,7 +1,7 @@
 <div>
     <div class="grid grid-cols-3 gap-5">
         <!-- Primer contenedor -->
-        <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 relative">
+        <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5">
     <form wire:submit.prevent="cargarArchivo">
         <div class="bg-gradient px-6 py-3 text-white rounded-md">
             <h2 class="text-lg font-semibold">Archivo: </h2>
@@ -12,14 +12,15 @@
             Cargar Archivo
         </button>
     </form>
-    <span wire:loading wire:target="archivo" class="absolute right-2 bottom-2">
-        <span class="cargando-icono"></span>
-    </span>
-    <span wire:loading wire:target="cargarArchivo" class="absolute right-2 bottom-2">
-        <span class="cargando-icono"></span>
-    </span>
+    <div class="relative">
+        <span wire:loading wire:target="archivo" class="absolute right-2 bottom-2">
+            <span class="cargando-icono"></span>
+        </span>
+        <span wire:loading wire:target="cargarArchivo" class="absolute right-2 bottom-2">
+            <span class="cargando-icono"></span>
+        </span>
+    </div>
 </div>
-
 
      <!-- Segundo contenedor mejorado -->
     {{--  <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 overflow-hidden">

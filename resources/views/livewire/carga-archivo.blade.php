@@ -741,7 +741,7 @@
                 <h3 class="text-indigo-600">SECCION DE ALTA A PROVEEDORES</h3>
                 <div class="grid grid-cols-2 gap-8">
                     <!-- Sección izquierda para el formulario de carga de archivos -->
-                    <div class="relative mr-3">
+                    <div class="mr-3">
                         <div class="fondocolor rounded-lg shadow-lg">
                             <form wire:submit.prevent="procesarArchivosAltaProveedores">
                                 <div class="bg-gradient px-6 py-3 rounded-md">
@@ -753,12 +753,14 @@
                                     Archivo</button>
                             </form>
                         </div>
-                        <span wire:loading wire:target="archivo" class="absolute bottom-0 right-0 mb-2 mr-2">
-                            <span class="cargando-icono"></span>
-                        </span>
-                        <span wire:loading wire:target="procesarArchivosAltaProveedores" class="absolute bottom-0 right-0 mb-2 mr-2">
-                            <span class="cargando-icono"></span>
-                        </span>
+                        <div class="relative">
+                            <span wire:loading wire:target="archivo" class="absolute bottom-0 right-0 mb-2 mr-2">
+                                <span class="cargando-icono"></span>
+                            </span>
+                            <span wire:loading wire:target="procesarArchivosAltaProveedores" class="absolute bottom-0 right-0 mb-2 mr-2">
+                                <span class="cargando-icono"></span>
+                            </span>
+                        </div>
                     </div>
                     
 
