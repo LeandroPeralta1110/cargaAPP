@@ -23,47 +23,28 @@
 </div>
 
      <!-- Segundo contenedor mejorado -->
-    {{--  <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 overflow-hidden">
+     <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 overflow-hidden">
         <div class="flex justify-between bg-gradient text-white px-6 py-3 rounded-md">
-            <h2 class="text-lg font-semibold">Datos duplicados</h2>
-            @if($datosDuplicados)
-                <button wire:click="eliminarDuplicados" class="bg-red-500 text-white px-4 py-2 rounded-md">Eliminar duplicados</button>
-            @endif
+            <h2 class="text-lg font-semibold">Cliente a buscar</h2>
         </div>
-        <div class="max-h-400px overflow-y-auto">
+        <input type="text" wire:model.defer="numeroOperacion" wire:input.debounce.1000ms="actualizarTabla" class="rounded-md p-1">
+            <div class="max-h-400px overflow-y-auto">
             <table class="min-w-full table-auto">
                 <thead>
                     <tr class="bg-gray-100">
-                        <th class="border p-3 text-left">Número de Operación</th>
-                        <th class="border p-3 text-left">Datos Duplicados</th>
+                        <th class="border p-3 text-left">DNI</th>
+                        <th class="border p-3 text-left">Ultima factura</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($datosDuplicados as $numeroOperacion => $duplicados)
-                        <tr class="{{ $loop->odd ? 'bg-gray-50' : 'bg-white' }}">
-                            <td class="border whitespace-no-wrap">{{ $numeroOperacion }}</td>
-                            <td class="border" colspan="3">
-                                <table class="min-w-full">
-                                    <tr>
-                                        <th class="border text-left whitespace-no-wrap">Impacta</th>
-                                        <th class="border text-left whitespace-no-wrap">Cliente</th>
-                                        <th class="border text-left whitespace-no-wrap">Importe</th>
-                                    </tr>
-                                    @foreach($duplicados as $duplicado)
-                                        <tr>
-                                            <td class="border whitespace-no-wrap">{{ $duplicado['Impacta'] }}</td>
-                                            <td class="border whitespace-no-wrap">{{ $duplicado['Cliente'] }}</td>
-                                            <td class="border whitespace-no-wrap">{{ $duplicado['Importe'] }}</td>
-                                        </tr>
-                                    @endforeach
-                                </table>
-                            </td>
+                        <tr>
+                            <td class="border p-3 bg-gray-50">{{ $cliCuit }}</td>
+                            <td class="border p-3 bg-white">{{ $ultimaReciboCliente }}</td>
                         </tr>
-                    @endforeach
                 </tbody>
             </table>
         </div>
-    </div> --}}
+    </div>
     
         <!-- Tercer contenedor mejorado -->
 {{-- <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 mt-5 overflow-hidden">
@@ -159,3 +140,13 @@
         </div>
     </div> --}}
 </div>
+{{-- <script>
+    document.addEventListener('livewire:load', function () {
+        Livewire.on('esperarYConsultar', function (idCliente) {
+            // Esperar 3 segundos (3000 milisegundos)
+            setTimeout(function () {
+                Livewire.emit('realizarConsulta', idCliente);
+            }, 3000);
+        });
+    });
+</script> --}}

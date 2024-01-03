@@ -24,16 +24,55 @@ class Cobranzas extends Component
     public $clientesNoEncontrados=[];
     public $clientesEncontrados=[];
     public $porPagina = 20;
+    public $numeroOperacion;
+    public $cliCuit;
+    public $ultimaReciboCliente;
+    public $ultimaRecivoFecha;
 
     public function index(){
     return DB::table('dbo.QRY_VENTASCOBROS')
-    ->where('CLI_CUIT', '=', '30717799794')
+    ->where('CLI_CUIT', '=', '32536084')
     ->select(['CLI_CUIT', 'IdentComp', 'CVE_FCONTAB', 'CLI_RAZSOC', 'SCV_ESTADO', 'TAL_DESC'])
     ->orderBy('CVE_FCONTAB', 'asc')
     ->get();
 
     return view('dashboard'/* , ['datosVentasCobros' => $datosVentasCobros] */);
     }
+    
+    public function actualizarTabla()
+{
+    // Formatear el número de operación con ceros a la izquierda
+    $idCliente = str_pad($this->numeroOperacion, 6, '0', STR_PAD_LEFT);
+
+    // Esperar 4 segundos antes de realizar la consulta
+    sleep(2);
+
+    // Consultar la base de datos
+    $datosClientes = $this->consultarBase($idCliente);
+    /* dd($datosClientes); */
+
+    // Verificar si hay al menos un cliente en la colección
+    if ($datosClientes->isNotEmpty()) {
+        // Obtener el primer cliente de la colección
+        $primerCliente = $datosClientes->first();
+
+        // Obtener el cli_CUIT del primer cliente
+        $this->cliCuit = $primerCliente->cli_CUIT;
+
+        /* dd($cliCuit); */
+
+        // Consultar el último recibo del cliente utilizando el cli_CUIT
+        $ultimaReciboCliente = DB::table('dbo.QRY_VENTASCOBROS')
+            ->select('CVE_FCONTAB', 'IdentComp')
+            ->where('CLI_CUIT', $this->cliCuit)
+            ->where('IdentComp', 'like', 'RC%')
+            ->orderBy('CVE_FCONTAB', 'desc')
+            ->first();
+
+        $this->ultimaReciboCliente = $ultimaReciboCliente->IdentComp;
+        $this->ultimaRecivoFecha = $ultimaReciboCliente->CVE_FCONTAB;
+    }
+}
 
     public function cargarArchivo()
     {
@@ -120,136 +159,125 @@ class Cobranzas extends Component
     $this->emit('duplicadosEliminados', 'Los datos duplicados se han eliminado correctamente.');
 } */
 
-    protected function procesarArchivoExcel()
-    {
-        // Utilizar PhpSpreadsheet para cargar el archivo Excel
-        $spreadsheet = IOFactory::load($this->archivo->getRealPath());
+protected function procesarArchivoExcel()
+{
+    // Utilizar PhpSpreadsheet para cargar el archivo Excel
+    $spreadsheet = IOFactory::load($this->archivo->getRealPath());
 
-        // Obtener la hoja activa del archivo Excel
-        $sheet = $spreadsheet->getActiveSheet();
+    // Obtener la hoja activa del archivo Excel
+    $sheet = $spreadsheet->getActiveSheet();
 
-        // Obtener las filas como un array asociativo
-        $contenido = [];
-        $datos = [];
-        $encabezados = [];
-        $ultimasFacturas = [];
-        $ultimoNumeroReciboPorCliente = [];
+    // Obtener las filas como un array asociativo
+    $contenido = [];
+    $encabezados = [];
+    $ultimoNumeroReciboGeneral = intval(substr($this->ultimaReciboCliente, 11, 8));
+    $ultimoNumeroReciboPorCliente = [];
 
-        foreach ($sheet->getRowIterator() as $row) {
-            $cellIterator = $row->getCellIterator();
-            $cellIterator->setIterateOnlyExistingCells(FALSE); // Permitir celdas vacías
-        
-            $rowContent = [];
-            foreach ($cellIterator as $index => $cell) {
-                // Obtener el valor formateado de la celda
-                $cellValue = $cell->getFormattedValue();
-        
-                // La primera fila se trata como encabezados
-                if ($row->getRowIndex() === 1) {
-                    $encabezados[$index] = !empty($cellValue) ? $cellValue : "Columna_$index";
+    foreach ($sheet->getRowIterator() as $row) {
+        $cellIterator = $row->getCellIterator();
+        $cellIterator->setIterateOnlyExistingCells(FALSE); // Permitir celdas vacías
+    
+        $rowContent = [];
+        foreach ($cellIterator as $index => $cell) {
+            // Obtener el valor formateado de la celda
+            $cellValue = $cell->getFormattedValue();
+    
+            // La primera fila se trata como encabezados
+            if ($row->getRowIndex() === 1) {
+                $encabezados[$index] = !empty($cellValue) ? $cellValue : "Columna_$index";
+            } else {
+                // Las filas subsiguientes se tratan como datos
+                $currentHeader = $encabezados[$index] ?? "Columna_$index";
+                $isDateColumn = $this->esColumnaFecha($currentHeader);
+    
+                // Convertir fechas solo si es una columna de fechas
+                if ($isDateColumn) {
+                    $formattedDate = Carbon::parse($cellValue)->format('Y-m-d');
+                    $rowContent[$currentHeader] = $formattedDate;
                 } else {
-                    // Las filas subsiguientes se tratan como datos
-                    $currentHeader = $encabezados[$index] ?? "Columna_$index";
-                    $isDateColumn = $this->esColumnaFecha($currentHeader);
-        
-                    // Convertir fechas solo si es una columna de fechas
-                    if ($isDateColumn) {
-                        $formattedDate = Carbon::parse($cellValue)->format('Y-m-d');
-                        $rowContent[$currentHeader] = $formattedDate;
-                    } else {
-                        $rowContent[$currentHeader] = $cellValue;
+                    $rowContent[$currentHeader] = $cellValue;
 
-                        // Quitar el símbolo de peso del campo 'IMPORTE'
-                        if ($currentHeader === 'IMPORTE') {
-                            $rowContent[$currentHeader] = str_replace('$ ', '', $cellValue);
-                        }
-                        // Obtener ID de cliente de la columna 'ID'
-                        if ($currentHeader === 'ID') {
-                            $idCliente = $cellValue;
-                            $idCliente = str_pad($cellValue, 6, '0', STR_PAD_LEFT);
-                        
-                            // Realizar la consulta a la base de datos
-                            $clienteCollection = $this->consultarBase($idCliente);
-                            // Obtener el primer elemento de la colección (Illuminate\Support\Collection)
-                            $cliente = $clienteCollection->first();
+                    // Quitar el símbolo de peso del campo 'IMPORTE'
+                    if ($currentHeader === 'IMPORTE') {
+                        $rowContent[$currentHeader] = str_replace('$ ', '', $cellValue);
+                    }
+                    // Obtener ID de cliente de la columna 'ID'
+                    if ($currentHeader === 'ID') {
+                        $idCliente = $cellValue;
+                        $idCliente = str_pad($cellValue, 6, '0', STR_PAD_LEFT);
+                    
+                        // Realizar la consulta a la base de datos
+                        $clienteCollection = $this->consultarBase($idCliente);
+                        // Obtener el primer elemento de la colección (Illuminate\Support\Collection)
+                        $cliente = $clienteCollection->first();
 
-                            
-                            /* dd($cliente); */
-                            // Verificar si se encontró un cliente antes de asignar valores
-                            if ($cliente) {
-                                $ultimaReciboCliente = DB::table('dbo.QRY_VENTASCOBROS')
-                                ->select('CVE_FCONTAB', 'IdentComp')
-                                ->where('CLI_CUIT', $cliente->cli_CUIT)
-                                ->where('IdentComp', 'like', 'RC%')
-                                ->orderBy('CVE_FCONTAB', 'desc')
-                                ->first();
+                        // Verificar si se encontró un cliente antes de asignar valores
+                        if ($cliente) {
+                            $primerosNumeros = substr($this->ultimaReciboCliente, 3, 5);
 
-                                $ultimaFacturaCliente = DB::table('dbo.QRY_VENTASCOBROS')
-                                ->select('CVE_FCONTAB', 'IdentComp')
-                                ->where('CLI_CUIT', $cliente->cli_CUIT)
-                                ->where('IdentComp', 'like', 'FC%')
-                                ->orderBy('CVE_FCONTAB', 'desc')
-                                ->first();
+                            // Obtener el último número de recibo para el cliente actual
+                            $ultimoNumeroRecibo = $ultimoNumeroReciboPorCliente[$idCliente] ?? $ultimoNumeroReciboGeneral;
 
-                                $ultimoReciboFecha = optional($ultimaFacturaCliente)->CVE_FCONTAB;
-                                $ultimoRecibo = optional($ultimaFacturaCliente)->IdentComp;
-    
-                            if ($ultimaReciboCliente) {
-                                // Obtener los números actuales
-                                $primerosNumeros = substr($ultimaReciboCliente->IdentComp, 3, 5);
-                                $ultimosNumeros = substr($ultimaReciboCliente->IdentComp, 11, 8);
-    
-                                // Incrementar el número de los últimos dígitos
-                                $nuevoNumero = intval($ultimosNumeros);
-    
-                                // Formar el nuevo IdentComp
-                                $nuevoIdentComp = 'RC ' . $primerosNumeros . '-' . str_pad($nuevoNumero, 8, '0', STR_PAD_LEFT);
-    
-                                // Utilizar $nuevoIdentComp como sea necesario
-                                $ultimaFacturaFecha = optional($ultimaReciboCliente)->CVE_FCONTAB;
-                                $ultimaFacturaIdentComp = $nuevoIdentComp;
-                            } 
-                                // Obtener la dirección y la localidad del cliente
-                                $direccion = $cliente->cli_Direc;
-                                $localidad = $cliente->cli_Loc;
-                        
-                                // Verificar si la dirección contiene una coma y "CABA"
-                                if (strpos($direccion, ',') !== false && stripos($direccion, 'CABA') !== false) {
-                                    // Dividir la dirección usando la coma y obtener la segunda parte
-                                    $partesDireccion = explode(',', $direccion);
-                                    $localidad = trim($partesDireccion[1]);
-                                }
-                        
-                                // Agregar los datos del cliente al array $rowContent
-                                $rowContent = array_merge($rowContent, [
-                                    'CUIT' => $cliente->cli_CUIT,
-                                    'RSOC' => $cliente->cli_RazSoc, 
-                                    'DIRECCION' => $direccion,
-                                    'LOCALIDAD' => $localidad,
-                                    'ULTIMA_FACTURA' => $ultimaFacturaFecha,
-                                    'ULTIMO_RECIBO_IDENTCOMP' => $ultimaFacturaIdentComp,
-                                    'ULTIMA_FACTURA_IDENTCOMP' => $ultimoRecibo,
-                                ]);
-                            }
+                            // Incrementar el número de recibo
+                            $nuevoNumero = $ultimoNumeroRecibo + 1;
+
+                            // Formar el nuevo IdentComp
+                            $nuevoIdentComp = 'RC ' . $primerosNumeros . '-' . str_pad($nuevoNumero, 8, '0', STR_PAD_LEFT);
+
+                            // Utilizar $nuevoIdentComp como sea necesario
+                            $ultimaFacturaFecha = $this->ultimaRecivoFecha;
+                            $ultimaFacturaIdentComp = $nuevoIdentComp;
+
+                            // Actualizar el último número de recibo para el cliente actual
+                            $ultimoNumeroReciboPorCliente[$idCliente] = $nuevoNumero;
+
+                            // Obtener la dirección y la localidad del cliente
+                            $direccion = $cliente->cli_Direc;
+                            $localidad = $cliente->cli_Loc;
+                    
+                            // Verificar si la dirección contiene una coma y "CABA"
+                            if (strpos($direccion, ',') !== false && (stripos($direccion, 'CABA') !== false || stripos($direccion, 'CAPITAL FEDERAL') !== false)) {
+                                // Dividir la dirección usando la coma y obtener la segunda parte
+                                $partesDireccion = explode(',', $direccion);
+                                $localidad = trim($partesDireccion[1]);
+                            }                                
+                    
+                            // Agregar los datos del cliente al array $rowContent
+                            $rowContent = array_merge($rowContent, [
+                                'CUIT' => $cliente->cli_CUIT,
+                                'RSOC' => $cliente->cli_RazSoc, 
+                                'DIRECCION' => $direccion,
+                                'LOCALIDAD' => $localidad,
+                                'ULTIMA_FACTURA' => $ultimaFacturaFecha,
+                                'ULTIMO_RECIBO_IDENTCOMP' => $ultimaFacturaIdentComp,
+                                'ULTIMA_FACTURA_IDENTCOMP' => $ultimoNumeroReciboPorCliente[$idCliente],
+                            ]);
                         }
                     }
                 }
             }
-            // Agregar la fila solo si no es la primera fila (encabezados)
-            if ($row->getRowIndex() > 1 && !empty(array_filter($rowContent))) {
-                // Buscar el cliente correspondiente en el array de clientesEncontrados
-                $cliente = collect($this->clientesEncontrados)->where('email', $rowContent['CLIENTE'])->first();
-                
-                // Verificar si se encontró un cliente antes de asignar valores
-                $idCliente = optional($cliente)->id;
-                
-                $razonSocialCliente = optional($cliente)->razon_social;
-                
-                $contenido[] = array_merge($rowContent);
-            }
-        }  
-        return $contenido;
-    }
+        }
+        
+        // Agregar la fila solo si no es la primera fila (encabezados)
+        if ($row->getRowIndex() > 1 && !empty(array_filter($rowContent))) {
+            // Buscar el cliente correspondiente en el array de clientesEncontrados
+            $cliente = collect($this->clientesEncontrados)->where('email', $rowContent['CLIENTE'])->first();
+            
+            // Verificar si se encontró un cliente antes de asignar valores
+            $idCliente = optional($cliente)->id;
+            
+            $razonSocialCliente = optional($cliente)->razon_social;
+            
+            $contenido[] = array_merge($rowContent);
+        }
+    }  
+    
+   dd($contenido);
+
+    return $contenido;
+}
+
+
 
     public function consultarBase($id){
         $query = DB::table('clientes')->where('cli_Cod','=',$id)->get();
@@ -377,9 +405,10 @@ class Cobranzas extends Component
 
         // Generar el contenido del archivo TXT
         $contenidoTxt = "";
-        $espaciosEntreCuitYImpacta = str_repeat(' ', 18);
+        $espaciosEntreCuitYImpacta = str_pad('CAJA03', 9,' ',STR_PAD_RIGHT);
         $esp8 = str_repeat(' ', 8);
-        $espaciosImporte = str_repeat(' ', 202);
+        $esp9 = str_repeat(' ', 9);
+        $espaciosImporte = str_repeat(' ', 210);
         $uni = str_pad('UNI', '5', ' ', STR_PAD_LEFT);
 
         foreach ($this->contenidoArchivo as $linea) {
@@ -404,7 +433,7 @@ class Cobranzas extends Component
             // Formatear CUIT con una longitud de 11
             $cuit = str_pad($linea['CUIT'], 8, ' ');
 
-            $contenidoTxt .= "{$operacion}{$esp8}{$impacta}{$id}{$uni}{$espaciosEntreCuitYImpacta}{$impacta}{$importe}{$espaciosImporte}{$importe}\r\n";
+            $contenidoTxt .= "{$operacion}{$esp8}{$impacta}{$id}{$uni}{$esp9}{$espaciosEntreCuitYImpacta}{$impacta}{$importe}{$espaciosImporte}{$importe}\r\n";
         }
 
         // Convertir el contenido a la codificación de caracteres ANSI
@@ -425,7 +454,7 @@ class Cobranzas extends Component
         $esp7 = str_repeat(' ',7);
         $esp6 = str_repeat(' ',6);
         $cod = str_pad('00001', 8, ' ', STR_PAD_RIGHT);
-        $s = str_pad('S','86',' ' ,STR_PAD_RIGHT);
+        $s = str_pad('S','87',' ' ,STR_PAD_RIGHT);
          // Guardar la configuración regional actual
         $configuracionRegionalActual = localeconv();
         $ceros40= str_repeat('0', 40);
