@@ -170,6 +170,7 @@ protected function procesarArchivoExcel()
     // Obtener las filas como un array asociativo
     $contenido = [];
     $encabezados = [];
+    $primerosNumeros = substr($this->ultimaReciboCliente, 3, 5);
     $ultimoNumeroReciboGeneral = intval(substr($this->ultimaReciboCliente, 11, 8));
     $ultimoNumeroReciboPorCliente = [];
 
@@ -211,25 +212,29 @@ protected function procesarArchivoExcel()
                         // Obtener el primer elemento de la colección (Illuminate\Support\Collection)
                         $cliente = $clienteCollection->first();
 
+                        $ultimaFacturaCliente = DB::table('dbo.QRY_VENTASCOBROS')
+                        ->select('CVE_FCONTAB', 'IdentComp')
+                        ->where('CLI_CUIT', $cliente->cli_CUIT)
+                        ->where('IdentComp', 'like', 'FC%')
+                        ->orderBy('CVE_FCONTAB', 'desc')
+                        ->first();
+
+                        $ultimaFactura = $ultimaFacturaCliente->IdentComp;
+                        $ultimaFacturaClienteFecha = $ultimaFacturaCliente->CVE_FCONTAB;
+                        $carbonDate = \Carbon\Carbon::parse($ultimaFacturaClienteFecha);
+                        // Obtener la fecha formateada
+                        $fechaFormateada = $carbonDate->toDateString();
+
                         // Verificar si se encontró un cliente antes de asignar valores
                         if ($cliente) {
-                            $primerosNumeros = substr($this->ultimaReciboCliente, 3, 5);
-
-                            // Obtener el último número de recibo para el cliente actual
-                            $ultimoNumeroRecibo = $ultimoNumeroReciboPorCliente[$idCliente] ?? $ultimoNumeroReciboGeneral;
-
-                            // Incrementar el número de recibo
-                            $nuevoNumero = $ultimoNumeroRecibo + 1;
+                            $ultimoNumeroReciboGeneral = $ultimoNumeroReciboGeneral + 1;
 
                             // Formar el nuevo IdentComp
-                            $nuevoIdentComp = 'RC ' . $primerosNumeros . '-' . str_pad($nuevoNumero, 8, '0', STR_PAD_LEFT);
+                            $nuevoIdentComp = 'RC ' . $primerosNumeros . '-' . str_pad($ultimoNumeroReciboGeneral, 8, '0', STR_PAD_LEFT);
 
                             // Utilizar $nuevoIdentComp como sea necesario
                             $ultimaFacturaFecha = $this->ultimaRecivoFecha;
                             $ultimaFacturaIdentComp = $nuevoIdentComp;
-
-                            // Actualizar el último número de recibo para el cliente actual
-                            $ultimoNumeroReciboPorCliente[$idCliente] = $nuevoNumero;
 
                             // Obtener la dirección y la localidad del cliente
                             $direccion = $cliente->cli_Direc;
@@ -250,7 +255,7 @@ protected function procesarArchivoExcel()
                                 'LOCALIDAD' => $localidad,
                                 'ULTIMA_FACTURA' => $ultimaFacturaFecha,
                                 'ULTIMO_RECIBO_IDENTCOMP' => $ultimaFacturaIdentComp,
-                                'ULTIMA_FACTURA_IDENTCOMP' => $ultimoNumeroReciboPorCliente[$idCliente],
+                                'ULTIMA_FACTURA_IDENTCOMP' => $ultimaFactura,
                             ]);
                         }
                     }
@@ -271,13 +276,8 @@ protected function procesarArchivoExcel()
             $contenido[] = array_merge($rowContent);
         }
     }  
-    
-   dd($contenido);
-
     return $contenido;
 }
-
-
 
     public function consultarBase($id){
         $query = DB::table('clientes')->where('cli_Cod','=',$id)->get();
@@ -380,6 +380,9 @@ protected function procesarArchivoExcel()
         $archivo3Contenido = $this->generarContenidoArchivo3();
         $archivo3Contenido = iconv("UTF-8", "Windows-1252", $archivo3Contenido);
         $this->agregarArchivoAlZip($zip, $archivo3Contenido, 'VRelacCo.txt');
+    
+        // Agregar archivo vacío 'VRegEsp.txt' al ZIP
+        $this->agregarArchivoAlZip($zip, '', 'VRegEsp.txt');
     
         // Cerrar el ZIP después de agregar todos los archivos
         $zip->close();

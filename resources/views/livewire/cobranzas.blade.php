@@ -27,24 +27,33 @@
         <div class="flex justify-between bg-gradient text-white px-6 py-3 rounded-md">
             <h2 class="text-lg font-semibold">Cliente a buscar</h2>
         </div>
-        <input type="text" wire:model.defer="numeroOperacion" wire:input.debounce.1000ms="actualizarTabla" class="rounded-md p-1">
-            <div class="max-h-400px overflow-y-auto">
+        <input type="text" wire:model.defer="numeroOperacion" wire:input.debounce.800ms="actualizarTabla" class="rounded-md p-1">
+        
+        <!-- Loader -->
+        <div class="relative">
+            <span wire:loading wire:target="actualizarTabla" class="absolute right-2 bottom-2">
+                <span class="cargando-icono"></span>
+            </span>
+        </div>
+    
+        <div class="max-h-400px overflow-y-auto">
             <table class="min-w-full table-auto">
                 <thead>
                     <tr class="bg-gray-100">
                         <th class="border p-3 text-left">DNI</th>
-                        <th class="border p-3 text-left">Ultima factura</th>
+                        <th class="border p-3 text-left">Ultimo Recibo</th>
                     </tr>
                 </thead>
                 <tbody>
-                        <tr>
-                            <td class="border p-3 bg-gray-50">{{ $cliCuit }}</td>
-                            <td class="border p-3 bg-white">{{ $ultimaReciboCliente }}</td>
-                        </tr>
+                    <tr>
+                        <td class="border p-3 bg-gray-50">{{ $cliCuit }}</td>
+                        <td class="border p-3 bg-white">{{ $ultimaReciboCliente }}</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
     </div>
+    
     
         <!-- Tercer contenedor mejorado -->
 {{-- <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 mt-5 overflow-hidden">
