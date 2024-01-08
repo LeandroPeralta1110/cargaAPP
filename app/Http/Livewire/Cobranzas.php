@@ -45,7 +45,7 @@ class Cobranzas extends Component
     $idCliente = str_pad($this->numeroOperacion, 6, '0', STR_PAD_LEFT);
 
     // Esperar 4 segundos antes de realizar la consulta
-    sleep(2);
+    /* sleep(2); */
 
     // Consultar la base de datos
     $datosClientes = $this->consultarBase($idCliente);
@@ -418,7 +418,22 @@ protected function procesarArchivoExcel()
             // Formatear OPERACION con una longitud de 24
             /* $operacion = 'RC   ' . str_pad($linea['ULTIMA_FACTURA_IDENTCOMP'], 19, ' '); */
             $operacion = $linea['ULTIMO_RECIBO_IDENTCOMP'];
+
+            // Eliminar guiones
             $operacion = str_replace('-', '', $operacion);
+
+            // Separar el código de recibo y el número
+            $prefix = substr($operacion, 0, 3); // Obtener "RC"
+            $codigoRecibo = substr($operacion, 3, 5); // Obtener el código de recibo
+            $codigoRecibo = ltrim($codigoRecibo, '0');
+            $codigoRecibo = str_pad($codigoRecibo, 4, '0', STR_PAD_LEFT);
+      
+            $numeroRecibo = substr($operacion, 8); // Obtener el número de recibo sin el primer 0
+
+            $numeroRecibo = str_pad($numeroRecibo, 8, '0', STR_PAD_LEFT);
+            // Construir el nuevo formato
+            $nuevoOperacion = $prefix . ' ' . $codigoRecibo . $numeroRecibo;
+
             $id = $linea['ID'];
             $id = str_pad($id, '7', '0', STR_PAD_LEFT) . '1';
 
@@ -436,7 +451,7 @@ protected function procesarArchivoExcel()
             // Formatear CUIT con una longitud de 11
             $cuit = str_pad($linea['CUIT'], 8, ' ');
 
-            $contenidoTxt .= "{$operacion}{$esp8}{$impacta}{$id}{$uni}{$esp9}{$espaciosEntreCuitYImpacta}{$impacta}{$importe}{$espaciosImporte}{$importe}\r\n";
+            $contenidoTxt .= "{$nuevoOperacion}{$esp8}{$impacta}{$id}{$uni}{$esp9}{$espaciosEntreCuitYImpacta}{$impacta}{$importe}{$espaciosImporte}{$importe}\r\n";
         }
 
         // Convertir el contenido a la codificación de caracteres ANSI
@@ -469,11 +484,29 @@ protected function procesarArchivoExcel()
 
         foreach ($this->contenidoArchivo as $linea) {
             $operacion = $linea['ULTIMO_RECIBO_IDENTCOMP'];
+
+            // Eliminar guiones
             $operacion = str_replace('-', '', $operacion);
+
+            // Separar el código de recibo y el número
+            $prefix = substr($operacion, 0, 3); // Obtener "RC"
+            $codigoRecibo = substr($operacion, 3, 5); // Obtener el código de recibo
+            $codigoRecibo = ltrim($codigoRecibo, '0');
+            $codigoRecibo = str_pad($codigoRecibo, 4, '0', STR_PAD_LEFT);
+      
+            $numeroRecibo = substr($operacion, 8); // Obtener el número de recibo sin el primer 0
+
+            $numeroRecibo = str_pad($numeroRecibo, 8, '0', STR_PAD_LEFT);
+            // Construir el nuevo formato
+            $nuevoOperacion = $prefix . ' ' . $codigoRecibo . $numeroRecibo;
+
             $impacta = \Carbon\Carbon::parse($linea['IMPACTA'])->format('Ymd');
             $id = $linea['ID'];
             $id = str_pad($id, '6', '0', STR_PAD_LEFT);
-            $rsoc= str_pad($linea['RSOC'],41,' ', STR_PAD_RIGHT);
+            /* $rsoc= str_pad($linea['RSOC'],41,' ', STR_PAD_RIGHT); */
+            $rsoc = $linea['RSOC']; // Razon Social
+            // Asegurar que la cadena tenga al menos 41 caracteres
+            $rsoc = mb_str_pad($rsoc, 41, ' ', STR_PAD_RIGHT, 'UTF-8');
             $direccion = str_pad($linea['DIRECCION'],38,' ', STR_PAD_RIGHT);
             $localidad = str_pad($linea['LOCALIDAD'],70,' ', STR_PAD_RIGHT);
             $zona= $linea['LOCALIDAD'] == 'CABA'? '11': '21';
@@ -485,7 +518,7 @@ protected function procesarArchivoExcel()
             $importe = number_format($importe, 2, '.', '');
             $importe = str_pad($importe, 15, '0', STR_PAD_LEFT);
             $cuit =  $zona . str_pad($linea['CUIT'],'11','0', STR_PAD_LEFT);
-            $contenidoTxt .= "{$operacion}{$esp8}{$impacta}{$id}{$rsoc}{$dig}{$esp2}{$cuit}{$esp14}{$ceros5}{$esp4}{$ceros4}{$esp7}{$impacta}{$guion}{$importe}{$esp6}{$cod}{$direccion}{$localidad}{$s}{$ceros40}{$esp23}\r\n";
+            $contenidoTxt .= "{$nuevoOperacion}{$esp8}{$impacta}{$id}{$rsoc}{$dig}{$esp2}{$cuit}{$esp14}{$ceros5}{$esp4}{$ceros4}{$esp7}{$impacta}{$guion}{$importe}{$esp6}{$cod}{$direccion}{$localidad}{$s}{$ceros40}{$esp23}\r\n";
         }
         return $contenidoTxt;
     }
@@ -496,7 +529,22 @@ protected function procesarArchivoExcel()
 
         foreach ($this->contenidoArchivo as $linea) {
             $operacion = $linea['ULTIMO_RECIBO_IDENTCOMP'];
+
+            // Eliminar guiones
             $operacion = str_replace('-', '', $operacion);
+
+            // Separar el código de recibo y el número
+            $prefix = substr($operacion, 0, 3); // Obtener "RC"
+            $codigoRecibo = substr($operacion, 3, 5); // Obtener el código de recibo
+            $codigoRecibo = ltrim($codigoRecibo, '0');
+            $codigoRecibo = str_pad($codigoRecibo, 4, '0', STR_PAD_LEFT);
+      
+            $numeroRecibo = substr($operacion, 8); // Obtener el número de recibo sin el primer 0
+
+            $numeroRecibo = str_pad($numeroRecibo, 8, '0', STR_PAD_LEFT);
+            // Construir el nuevo formato
+            $nuevoOperacion = $prefix . ' ' . $codigoRecibo . $numeroRecibo;
+
             $fc = $linea['ULTIMA_FACTURA_IDENTCOMP'];
             $fc = str_replace('-', '', $fc);
             $fc = preg_replace('/(?<=A)\s/', '', str_replace(['FCA', ' A'], ['FC A', ' A'], $fc));
@@ -518,7 +566,7 @@ protected function procesarArchivoExcel()
             /* $factura = str_pad($factura,28,' ',STR_PAD_RIGHT); */
             $dAct = Carbon::now()->format('Ymd');
 
-            $contenidoTxt .= "{$operacion}{$impacta}{$esp4}{$impacta}{$id}{$fc}{$impacta2}{$impacta}{$importe}\r\n";
+            $contenidoTxt .= "{$nuevoOperacion}{$impacta}{$esp4}{$impacta}{$id}{$fc}{$impacta2}{$impacta}{$importe}\r\n";
         }
         return $contenidoTxt;
     }

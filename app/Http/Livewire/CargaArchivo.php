@@ -390,6 +390,8 @@ public function cargaArchivoTipo1($params = null,$archivoOriginalSinDuplicados =
             $infoCriterioEmpresa = substr($infoCriterioEmpresa, 0, 20);
         }
 
+        $infoCriterioEmpresa = str_pad($infoCriterioEmpresa,20,' ', STR_PAD_RIGHT);
+
         $fechaActual = Carbon::now();
 
         // Retroceder al día hábil anterior (lunes a viernes)
