@@ -40,12 +40,14 @@
             <table class="min-w-full table-auto">
                 <thead>
                     <tr class="bg-gray-100">
+                        <th class="border p-3 text-left">Cliente</th>
                         <th class="border p-3 text-left">DNI</th>
                         <th class="border p-3 text-left">Ultimo Recibo</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
+                        <td class="border p-3 bg-gray-50">{{ $clinombre }}</td>
                         <td class="border p-3 bg-gray-50">{{ $cliCuit }}</td>
                         <td class="border p-3 bg-white">{{ $ultimaReciboCliente }}</td>
                     </tr>

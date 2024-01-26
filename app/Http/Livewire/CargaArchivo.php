@@ -1413,7 +1413,7 @@ public function descargarDatosRegistroTipo3()
             $ultimaFila['importe_retencion_IVA'] .
             $ultimaFila['importe_ingreso_bruto'] .
             $ultimaFila['importe_sellado_provincial'] .
-            $ultimaFila['filler']."\n"
+            $ultimaFila['filler']
         );
 
         /* // Define el nombre del archivo

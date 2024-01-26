@@ -28,11 +28,12 @@ class Cobranzas extends Component
     public $cliCuit;
     public $ultimaReciboCliente;
     public $ultimaRecivoFecha;
+    public $clinombre;
 
     public function index(){
     return DB::table('dbo.QRY_VENTASCOBROS')
-    ->where('CLI_CUIT', '=', '32536084')
-    ->select(['CLI_CUIT', 'IdentComp', 'CVE_FCONTAB', 'CLI_RAZSOC', 'SCV_ESTADO', 'TAL_DESC'])
+    ->where('CLI_CUIT', '=', '28467598')
+    ->select(['SIV_CODDGI','SIV_DESC','CLI_CUIT', 'IdentComp', 'CVE_FCONTAB', 'CLI_RAZSOC', 'SCV_ESTADO', 'TAL_DESC'])
     ->orderBy('CVE_FCONTAB', 'asc')
     ->get();
 
@@ -58,6 +59,7 @@ class Cobranzas extends Component
 
         // Obtener el cli_CUIT del primer cliente
         $this->cliCuit = $primerCliente->cli_CUIT;
+        $this->clinombre = $primerCliente->cli_RazSoc;
 
         /* dd($cliCuit); */
 
@@ -110,8 +112,6 @@ class Cobranzas extends Component
 
             // Almacenar clientes no encontrados en una variable de componente
             $this->clientesNoEncontrados = $clientesNoEncontrados; */
-
-            // Otra lógica que necesites hacer después de procesar el archivo
 
             // Emitir un mensaje de éxito (opcional)
             $this->emit('archivoProcesado', 'El archivo se ha procesado correctamente.');
@@ -212,12 +212,14 @@ protected function procesarArchivoExcel()
                         // Obtener el primer elemento de la colección (Illuminate\Support\Collection)
                         $cliente = $clienteCollection->first();
 
+                        // Obtiene la ultima factura del cliente
                         $ultimaFacturaCliente = DB::table('dbo.QRY_VENTASCOBROS')
                         ->select('CVE_FCONTAB', 'IdentComp')
                         ->where('CLI_CUIT', $cliente->cli_CUIT)
                         ->where('IdentComp', 'like', 'FC%')
                         ->orderBy('CVE_FCONTAB', 'desc')
                         ->first();
+
 
                         $ultimaFactura = $ultimaFacturaCliente->IdentComp;
                         $ultimaFacturaClienteFecha = $ultimaFacturaCliente->CVE_FCONTAB;
@@ -398,6 +400,7 @@ protected function procesarArchivoExcel()
     }
 
     // Función para generar contenido del primer archivo
+    //archivo medPAGO.
     private function generarContenidoArchivo1()
     {
         // Guardar la configuración regional actual
@@ -435,7 +438,7 @@ protected function procesarArchivoExcel()
             $nuevoOperacion = $prefix . ' ' . $codigoRecibo . $numeroRecibo;
 
             $id = $linea['ID'];
-            $id = str_pad($id, '7', '0', STR_PAD_LEFT) . '1';
+            $id = str_pad($id, '6', '0', STR_PAD_LEFT) . '11';
 
             // Formatear IMPACTA con una longitud de 8 (formato aaaammdd)
             $impacta = \Carbon\Carbon::parse($linea['IMPACTA'])->format('Ymd');
@@ -459,6 +462,7 @@ protected function procesarArchivoExcel()
         return $contenidoTxt;
     }
 
+    // Archivo cabecera
     public function generarContenidoArchivo2(){
         $contenidoTxt= "";
         $esp8 = str_repeat(' ', 8);
@@ -488,6 +492,17 @@ protected function procesarArchivoExcel()
             // Eliminar guiones
             $operacion = str_replace('-', '', $operacion);
 
+            $factura = $linea['ULTIMA_FACTURA_IDENTCOMP'];
+            $dig = '';
+
+            if (strpos($factura, 'FC B') !== false) {
+                // Si la factura contiene 'FC B', asignar '5' a $dig
+                $dig = '5';
+            } elseif (strpos($factura, 'FC A') !== false) {
+                // Si la factura contiene 'FC A', asignar '1' a $dig
+                $dig = '1';
+            }
+
             // Separar el código de recibo y el número
             $prefix = substr($operacion, 0, 3); // Obtener "RC"
             $codigoRecibo = substr($operacion, 3, 5); // Obtener el código de recibo
@@ -511,7 +526,6 @@ protected function procesarArchivoExcel()
             $localidad = str_pad($linea['LOCALIDAD'],70,' ', STR_PAD_RIGHT);
             $zona= $linea['LOCALIDAD'] == 'CABA'? '11': '21';
             // Formatear IMPACTA con una longitud de 8 (formato aaaammdd)
-            // Convertir IMPORTE a un número de punto flotante
             // Convertir IMPORTE a un número de punto flotante
             $importe = floatval(str_replace(',', '.', str_replace('.', '', $linea['IMPORTE'])));
             // Formatear IMPORTE con una longitud de 16 y completar con 0 a la izquierda
@@ -549,6 +563,9 @@ protected function procesarArchivoExcel()
             $fc = str_replace('-', '', $fc);
             $fc = preg_replace('/(?<=A)\s/', '', str_replace(['FCA', ' A'], ['FC A', ' A'], $fc));
             $fc = preg_replace('/(?<=B)\s/', '', str_replace(['FCB', ' B'], ['FC B', ' B'], $fc));
+            // Eliminar un cero específico
+            $fc = preg_replace('/(?<=B)0/', '', $fc, 1);
+            $fc = preg_replace('/(?<=A)0/', '', $fc, 1);
             if(empty($fc)){
                 $fc= str_repeat(' ',17);
             }
@@ -559,7 +576,7 @@ protected function procesarArchivoExcel()
             $importe = floatval(str_replace(',', '.', str_replace('.', '', $linea['IMPORTE'])));
             // Formatear IMPORTE con una longitud de 16 y completar con 0 a la izquierda
             $importe = number_format($importe, 2, '.', '');
-            $importe = str_pad($importe, 15, '0', STR_PAD_LEFT);
+            $importe = str_pad($importe, 16, '0', STR_PAD_LEFT);
             /* $factura = $linea['ULTIMO_RECIBO_IDENTCOMP'];
             $factura = str_replace([' ', '-'], '', $factura);
             $factura = substr($factura, 0, 2) . ' ' . substr($factura, 2); */
