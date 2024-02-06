@@ -29,6 +29,7 @@ class Cobranzas extends Component
     public $ultimaReciboCliente;
     public $ultimaRecivoFecha;
     public $clinombre;
+    public $sinFactura = [];
 
     public function index(){
     return DB::table('dbo.QRY_VENTASCOBROS')
@@ -219,7 +220,15 @@ protected function procesarArchivoExcel()
                         ->where('IdentComp', 'like', 'FC%')
                         ->orderBy('CVE_FCONTAB', 'desc')
                         ->first();
-
+                        
+                        if (!$ultimaFacturaCliente) {
+                            // El cliente no tiene facturas, agregar a la lista y continuar con el siguiente cliente
+                            $this->sinFactura[] = [
+                                'ID' => $idCliente,
+                                'Nombre' => optional($cliente)->cli_RazSoc,  // Puedes ajustar el campo Nombre según tu estructura de datos
+                            ];
+                            continue;  // Salir del bucle actual y pasar al siguiente cliente
+                        }
 
                         $ultimaFactura = $ultimaFacturaCliente->IdentComp;
                         $ultimaFacturaClienteFecha = $ultimaFacturaCliente->CVE_FCONTAB;
@@ -241,7 +250,7 @@ protected function procesarArchivoExcel()
                             // Obtener la dirección y la localidad del cliente
                             $direccion = $cliente->cli_Direc;
                             $localidad = $cliente->cli_Loc;
-                    
+
                             // Verificar si la dirección contiene una coma y "CABA"
                             if (strpos($direccion, ',') !== false && (stripos($direccion, 'CABA') !== false || stripos($direccion, 'CAPITAL FEDERAL') !== false)) {
                                 // Dividir la dirección usando la coma y obtener la segunda parte
@@ -251,6 +260,7 @@ protected function procesarArchivoExcel()
                     
                             // Agregar los datos del cliente al array $rowContent
                             $rowContent = array_merge($rowContent, [
+                                'ID' => $cliente->cli_Cod,
                                 'CUIT' => $cliente->cli_CUIT,
                                 'RSOC' => $cliente->cli_RazSoc, 
                                 'DIRECCION' => $direccion,
@@ -268,8 +278,8 @@ protected function procesarArchivoExcel()
         // Agregar la fila solo si no es la primera fila (encabezados)
         if ($row->getRowIndex() > 1 && !empty(array_filter($rowContent))) {
             // Buscar el cliente correspondiente en el array de clientesEncontrados
-            $cliente = collect($this->clientesEncontrados)->where('email', $rowContent['CLIENTE'])->first();
-            
+/*             $cliente = collect($this->clientesEncontrados)->where('email', $rowContent['CLIENTE'])->first();
+ */            
             // Verificar si se encontró un cliente antes de asignar valores
             $idCliente = optional($cliente)->id;
             
@@ -522,7 +532,7 @@ protected function procesarArchivoExcel()
             $rsoc = $linea['RSOC']; // Razon Social
             // Asegurar que la cadena tenga al menos 41 caracteres
             $rsoc = mb_str_pad($rsoc, 41, ' ', STR_PAD_RIGHT, 'UTF-8');
-            $direccion = str_pad($linea['DIRECCION'],38,' ', STR_PAD_RIGHT);
+            $direccion = mb_str_pad($linea['DIRECCION'],38,' ', STR_PAD_RIGHT, 'UTF-8');
             $localidad = str_pad($linea['LOCALIDAD'],70,' ', STR_PAD_RIGHT);
             $zona= $linea['LOCALIDAD'] == 'CABA'? '11': '21';
             // Formatear IMPACTA con una longitud de 8 (formato aaaammdd)

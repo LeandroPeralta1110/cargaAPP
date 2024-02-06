@@ -41,7 +41,7 @@
                 <thead>
                     <tr class="bg-gray-100">
                         <th class="border p-3 text-left">Cliente</th>
-                        <th class="border p-3 text-left">DNI</th>
+                        <th class="border p-3 text-left">DNI/CUIL</th>
                         <th class="border p-3 text-left">Ultimo Recibo</th>
                     </tr>
                 </thead>
@@ -58,33 +58,38 @@
     
     
         <!-- Tercer contenedor mejorado -->
-{{-- <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 mt-5 overflow-hidden">
+        @if(count($sinFactura) > 0)
+<div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 overflow-hidden">
     <div class="flex justify-between bg-gradient text-white px-6 py-3 rounded-md">
-        <h2 class="text-lg font-semibold">Registrar Clientes de Archivos</h2>
+        <h2 class="text-lg font-semibold">Clientes sin Recibo/factura</h2>
     </div>
-    @if(count($clientesNoEncontrados) > 0)
-        <div class="p-4">
-            <table class="min-w-full border border-gray-300">
+
+    <div class="p-4">
+        @if(count($sinFactura) > 0)
+            <table class="min-w-full bg-white border border-gray-300 shadow-sm rounded-md">
                 <thead>
-                    <tr class="bg-gray-100">
-                        <th class="border-b p-3 text-left">Email</th>
-                        <th class="border-b p-3 text-left">Acción</th>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <!-- Agrega más columnas según sea necesario -->
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($clientesNoEncontrados as $cliente)
-                        <tr class="{{ $loop->odd ? 'bg-gray-50' : 'bg-white' }}">
-                            <td class="border p-3">{{ $cliente }}</td>
-                            <td class="border p-3">
-                                <button wire:click="guardarCliente('{{ $cliente }}')" class="bg-green-500 text-white px-4 py-2 rounded-md">Guardar</button>
-                            </td>
+                    @foreach($sinFactura as $cliente)
+                        <tr>
+                            <td>{{ $cliente['ID'] }}</td>
+                            <td>{{ $cliente['Nombre'] }}</td>
+                            <!-- Agrega más celdas según sea necesario -->
                         </tr>
                     @endforeach
                 </tbody>
             </table>
-        </div>
-    @endif
-</div> --}}
+        @else
+            <p class="text-gray-600">Todos los clientes tienen facturas o recibos.</p>
+        @endif
+    </div>
+</div>
+@endif
 
     </div>
 
@@ -102,24 +107,24 @@
             <table class="min-w-full table-auto">
                 <thead>
                     <tr class="bg-gray-100">
+                        <th class="border p-3 text-left">ID</th>
                         <th class="border p-3 text-left">Razon Social</th>
-                        <th class="border p-3 text-left">DNI</th>
+                        <th class="border p-3 text-left">DNI/CUIL</th>
                         <th class="border p-3 text-left">Operacion</th>
                         <th class="border p-3 text-left">Impacta</th>
                         <th class="border p-3 text-left">Importe</th>
-                        {{-- Otros campos según sea necesario --}}
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($contenidoArchivo as $index => $linea)
                         <tr class="{{ $index % 2 === 0 ? 'bg-gray-100' : 'bg-white' }}">
+                            <td class="border p-3">{{ $linea['ID'] }}</td>
                             <td class="border p-3 w-1/4">{{ $linea['RSOC'] }}</td>
                             <td class="border p-3">{{ $linea['CUIT'] }}</td>
                             <td class="border p-3">{{ $linea['OPERACIÓN'] }}</td>
                             <td class="border p-3">{{ \Carbon\Carbon::parse($linea['IMPACTA'])->format('d/m/Y') }}</td>
                             <td class="border p-3">{{ $linea['IMPORTE'] }}</td>
                             {{-- Mostrar el campo 'CUIT' obtenido de la base de datos --}}
-                            {{-- Otros campos según sea necesario --}}
                         </tr>
                     @endforeach
                 </tbody>                
