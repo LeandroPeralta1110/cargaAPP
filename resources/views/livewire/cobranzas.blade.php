@@ -27,7 +27,7 @@
         <div class="flex justify-between bg-gradient text-white px-6 py-3 rounded-md">
             <h2 class="text-lg font-semibold">Cliente a buscar</h2>
         </div>
-        <input type="text" wire:model.defer="numeroOperacion" wire:input.debounce.400ms="actualizarTabla" class="rounded-md p-1">
+        <input type="text" wire:model.defer="numeroOperacion" wire:input.debounce.400ms="actualizarTabla" class="p-1">
         
         <!-- Loader -->
         <div class="relative">

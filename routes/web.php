@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Auth;
 |
 */
 Route::get('/', CargaArchivo::class)->name('cargar-archivo');
+Route::get('/alta-proveedores/banco-frances', CargaArchivo::class)->name('cargar-archivo-frances');
 Route::get('/cobranzas', Cobranzas::class)->name('cobranzas');
 Route::resource('clients', clientController::class);
 Auth::routes();

@@ -1,5 +1,5 @@
 <?php
-//Componente donde se ecuentra toda la logica de el programa, tanto la carga, descarga y eliminacion de archivos para el banco nacion.
+//Componente donde se ecuentra toda la logica de el programa, tanto la carga, descarga y eliminacion de archivos para el banco frances.
 //@autor= Leandro Peralta
 namespace App\Http\Livewire;
 
@@ -161,7 +161,7 @@ class CargaArchivo extends Component
             $camposFaltantes = []; 
 
             $datosValidados = [
-                'titulares' => '1',
+                'cod_reg' => '2110',
                 'id_tipo' => '1',
                 'tipo_cuenta' => '01',
             ];
@@ -181,7 +181,7 @@ class CargaArchivo extends Component
                 } elseif ($this->validarCUIT($dato)) { // CUIT
                     $datosValidados['cuit'] = $dato;
                     $cuitEncontrado = true;
-                } elseif (preg_match('/^[\p{L}\s,.-]{8,50}$/', $dato)) {
+                }elseif (preg_match('/^[\p{L}\s,.-]{8,50}$/', $dato)) {
                     if (!$referenciaEncontrada) {
                         $referencia = substr($dato, 0, 30);
                         $referencia = str_pad($referencia, 30, ' ', STR_PAD_RIGHT);
@@ -994,8 +994,8 @@ private function validarIdentificacionCliente($dato)
             $contenido2 = mb_convert_encoding($contenido2, 'Windows-1252', 'UTF-8');
     
             // Crea los archivos en el almacenamiento temporal
-            file_put_contents($nombreArchivo, str_replace("\n", "\r\n", $contenido));
-            file_put_contents($nombreArchivo2, str_replace("\n", "\r\n", $contenido2));
+            file_put_contents($nombreArchivo, $contenido);
+            file_put_contents($nombreArchivo2, $contenido2);
     
             // Descarga los dos archivos en un archivo ZIP
             $zipFile = 'archivos_descargados.zip';
@@ -1626,7 +1626,7 @@ private function findLastIndexByTipoRegistro($tipoRegistro)
             $datosPaginados = array_slice($this->datosProcesadosTipo3, $desde, $this->porPagina);
         }
 
-        return view('livewire.carga-archivo', [
+        return view('livewire.carga-archivo-frances', [
             'datos' => $datosPaginados,
             'total' => $total,
             'desde' => $desde,

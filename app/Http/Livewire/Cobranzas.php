@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Livewire;
 
 use Illuminate\Support\Facades\Date;
@@ -94,7 +93,6 @@ class Cobranzas extends Component
             } else {
                 // Para archivos CSV
                 $this->contenidoArchivo = $this->procesarArchivoCSV();
-            
             }
             /* // Detectar y almacenar datos duplicados
             $datosDuplicados = $this->detectarDatosDuplicados($this->contenidoArchivo);
@@ -114,7 +112,7 @@ class Cobranzas extends Component
             // Almacenar clientes no encontrados en una variable de componente
             $this->clientesNoEncontrados = $clientesNoEncontrados; */
 
-            // Emitir un mensaje de éxito (opcional)
+            // Emitir un mensaje de éxito
             $this->emit('archivoProcesado', 'El archivo se ha procesado correctamente.');
 
             // Almacenar datos duplicados en una variable de componente
@@ -292,6 +290,7 @@ protected function procesarArchivoExcel()
 }
 
     public function consultarBase($id){
+        // Obtener la informacion del cliente por su id
         $query = DB::table('clientes')->where('cli_Cod','=',$id)->get();
         return $query;
     }
@@ -322,7 +321,6 @@ protected function procesarArchivoExcel()
         $this->emit('clienteExistente', 'El cliente ya está registrado en la base de datos.');
     }
 } */
-
 
     // Función para verificar si una columna es una columna de fechas
     protected function esColumnaFecha($header)
@@ -373,6 +371,10 @@ protected function procesarArchivoExcel()
         return $resultados;
     }
 
+    //**************************** */
+    //  Descargar archivos en un .ZIP
+    //**************************** */
+
     public function descargarArchivoTxt()
     {
         // Crear un archivo ZIP
@@ -410,7 +412,7 @@ protected function procesarArchivoExcel()
     }
 
     // Función para generar contenido del primer archivo
-    //archivo medPAGO.
+    // archivo medPAGO.
     private function generarContenidoArchivo1()
     {
         // Guardar la configuración regional actual
