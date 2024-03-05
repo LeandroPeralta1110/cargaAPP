@@ -15,7 +15,7 @@
         "laravelcollective/html": "*",
         "livewire/livewire": "^2.11",
         "maatwebsite/excel": "^1.1",
-        "phpoffice/phpspreadsheet": "*"
+        "phpoffice/phpspreadsheet": "^2.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",

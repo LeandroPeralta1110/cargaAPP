@@ -17,7 +17,7 @@
                     </button>
                     <div x-show="open" @click.away="open = false" class="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg">
                         <a class="rounded-t bg-gray-200 hover:bg-gray-400 py-2 px-4 block whitespace-no-wrap" href="{{ route('cargar-archivo') }}">Archivos (Banco Nacion)</a>
-                        <a class="bg-gray-200 hover:bg-gray-400 py-2 px-4 block whitespace-no-wrap" href="{{ route('cargar-archivo-frances') }}">Archivos (Banco Francés)</a>
+                        <a class="bg-gray-200 hover:bg-gray-400 py-2 px-4 block whitespace-no-wrap" href="{{ route('archivo-frances') }}">Archivos (Banco Francés)</a>
                     </div>
                 </div>
                 

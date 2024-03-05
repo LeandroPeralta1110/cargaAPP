@@ -394,11 +394,11 @@ public function cargaArchivoTipo1($params = null,$archivoOriginalSinDuplicados =
 
         $fechaActual = Carbon::now();
 
-        // Retroceder al día hábil anterior (lunes a viernes)
-        $diaHabilAnterior = $fechaActual->subWeekday();
-
         // Formatear la fecha según tus necesidades
-        $fechaFormateada = $diaHabilAnterior->format("d/m/Y");
+        $fechaFormateada = $fechaActual->format("d/m/Y");
+
+        /* // Retroceder al día hábil anterior (lunes a viernes)
+        $diaHabilAnterior = $fechaActual->subWeekday(); */
 
         // Inicializa datos preestablecidos con ceros
         $datosPreestablecidos = [
@@ -986,7 +986,7 @@ private function validarIdentificacionCliente($dato)
             $contenido2 .= $this->generarInformacionEspecial();
             
             // Define los nombres de los archivos
-            $nombreArchivo = 'datos_pago_proveedores.txt';
+            $nombreArchivo = 'GT_PAGOS.txt';
             $nombreArchivo2 = 'datos_alta_proveedores.txt';
         
             // Convertir a codificación de caracteres ANSI
@@ -1341,7 +1341,7 @@ public function descargarDatosRegistroTipo2($indice)
 
                 if(isset($identificacionCliente)&& isset($nroDocumento)){
                     /* $identificacionNroDocumento = $nroDocumento; */
-                    $identificacionNroDocumento = $fila['cbu'];
+                    $identificacionNroDocumento = $identificacionCliente . $nroDocumento;
                     // Asegura que la longitud sea de 22 caracteres
                     $identificacionNroDocumento = str_pad($identificacionNroDocumento, 22, ' ', STR_PAD_RIGHT);
                 }

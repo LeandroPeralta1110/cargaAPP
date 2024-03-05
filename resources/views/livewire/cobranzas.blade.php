@@ -27,7 +27,12 @@
         <div class="flex justify-between bg-gradient text-white px-6 py-3 rounded-md">
             <h2 class="text-lg font-semibold">Cliente a buscar</h2>
         </div>
-        <input type="text" wire:model.defer="numeroOperacion" wire:input.debounce.400ms="actualizarTabla" class="p-1">
+        <div class="flex items-center space-x-4 px-6 py-3">
+            <!-- Input para ingresar el ID del cliente -->
+            <input type="text" wire:model.defer="numeroOperacion" wire:input.debounce.400ms="actualizarTabla" class="p-1">
+            <!-- Campo de fecha -->
+            <input type="date" wire:model.defer="fecha" wire:input.debounce.400ms="actualizarTabla" class="p-1">
+        </div>
         
         <!-- Loader -->
         <div class="relative">
@@ -49,13 +54,50 @@
                     <tr>
                         <td class="border p-3 bg-gray-50">{{ $clinombre }}</td>
                         <td class="border p-3 bg-gray-50">{{ $cliCuit }}</td>
-                        <td class="border p-3 bg-white">{{ $ultimaReciboCliente }}</td>
+                        <td class="border p-3 bg-white relative">
+                            @if ($ultimaReciboCliente)
+                            {{ $ultimaReciboCliente }}
+                                <span class="absolute top-0 right-0 text-green-500"> <!-- Clase de color verde -->
+                                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </span>
+                            @else
+                                <p>NO existe Recibo</p>
+                            @endif
+                        </td>
                     </tr>
                 </tbody>
             </table>
         </div>
     </div>
-    
+
+    @if($recibosCliente)
+    <div class="overflow-y-auto max-h-[300px]">
+        <table class="min-w-full overflow-y-auto max-h-[300px]">
+            <thead>
+                <tr class="bg-gray-100">
+                    <th class="border p-3 text-left">Fecha de Emisión</th>
+                    <th class="border p-3 text-left">Número de Recibo</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($recibosCliente as $recibo)
+                    <tr>
+                        @if(isset($recibo->CVE_FEMISION))
+                            <td class="border p-3 bg-gray-50">{{ date('d-m-Y', strtotime($recibo->CVE_FEMISION)) }}</td>
+                        @endif
+                        @if(isset($recibo->IdentComp))
+                        <td class="border p-3 bg-gray-50">{{ $recibo->IdentComp }}</td>
+                        @endif
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+@endif
+
+
     
         <!-- Tercer contenedor mejorado -->
         @if(count($sinFactura) > 0)
@@ -98,11 +140,16 @@
         <div class="bg-gradient text-white px-6 py-3 flex justify-between items-center">
             <h2 class="text-lg font-semibold">Contenido del Archivo</h2>
             @if($contenidoArchivo)
-                <button wire:click="descargarArchivoTxt" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 m-4 rounded-md mt-4">
-                    Descargar Archivo
-                </button>
+                <div class="flex items-center"> <!-- Contenedor de los botones -->
+                    <button wire:click="descargarNumerosExcel" class="bg-green-500 hover:bg-green-600 text-white mr-2 px-4 py-2 m-2 rounded-md mt-4">
+                        Descargar Num. Recibos en Excel
+                    </button>
+                    <button wire:click="descargarArchivoTxt" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 m-2 rounded-md mt-4">
+                        Descargar Archivo
+                    </button>
+                </div>
             @endif
-        </div>        
+        </div>                
         <div class="max-h-400px overflow-y-auto">
             <table class="min-w-full table-auto">
                 <thead>

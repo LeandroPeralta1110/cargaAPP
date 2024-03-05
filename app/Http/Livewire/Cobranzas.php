@@ -11,6 +11,7 @@ use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use Illuminate\Support\Carbon;
 use App\Models\client;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use ZipArchive;
 
 class Cobranzas extends Component
@@ -29,12 +30,16 @@ class Cobranzas extends Component
     public $ultimaRecivoFecha;
     public $clinombre;
     public $sinFactura = [];
+    public $numerosGenerados = [];
+    public $cliID;
+    public $fecha;
+    public $recibosCliente = [];
 
     public function index(){
     return DB::table('dbo.QRY_VENTASCOBROS')
-    ->where('CLI_CUIT', '=', '28467598')
-    ->select(['SIV_CODDGI','SIV_DESC','CLI_CUIT', 'IdentComp', 'CVE_FCONTAB', 'CLI_RAZSOC', 'SCV_ESTADO', 'TAL_DESC'])
-    ->orderBy('CVE_FCONTAB', 'asc')
+    ->where('CLI_CUIT', '=', '30516492747')
+    ->select(['CVECLI_CODIN','SIV_CODDGI','SIV_DESC','CLI_CUIT', 'IdentComp', 'CVE_FEMISION', 'CLI_RAZSOC', 'SCV_ESTADO', 'TAL_DESC'])
+    ->orderBy('CVE_FEMISION', 'asc')
     ->get();
 
     return view('dashboard'/* , ['datosVentasCobros' => $datosVentasCobros] */);
@@ -45,36 +50,67 @@ class Cobranzas extends Component
     // Formatear el número de operación con ceros a la izquierda
     $idCliente = str_pad($this->numeroOperacion, 6, '0', STR_PAD_LEFT);
 
-    // Esperar 4 segundos antes de realizar la consulta
-    /* sleep(2); */
-
     // Consultar la base de datos
     $datosClientes = $this->consultarBase($idCliente);
-    /* dd($datosClientes); */
-
+    
     // Verificar si hay al menos un cliente en la colección
     if ($datosClientes->isNotEmpty()) {
         // Obtener el primer cliente de la colección
         $primerCliente = $datosClientes->first();
-
+        
         // Obtener el cli_CUIT del primer cliente
         $this->cliCuit = $primerCliente->cli_CUIT;
         $this->clinombre = $primerCliente->cli_RazSoc;
+        $this->cliID = $primerCliente->cli_Cod;
+        
+        $this->recibosCliente = $this->consultarRecibosCliente($this->cliID);
 
-        /* dd($cliCuit); */
-
-        // Consultar el último recibo del cliente utilizando el cli_CUIT
-        $ultimaReciboCliente = DB::table('dbo.QRY_VENTASCOBROS')
-            ->select('CVE_FCONTAB', 'IdentComp')
-            ->where('CLI_CUIT', $this->cliCuit)
+        if($this->cliID && $this->fecha){
+            // Consultar el último recibo del cliente utilizando el cli_CUIT y la fecha seleccionada
+            $ultimaReciboCliente = DB::table('dbo.QRY_VENTASCOBROS')
+            ->select('CVE_FEMISION', 'IdentComp')
+            ->where('CVECLI_CODIN', $this->cliID)
             ->where('IdentComp', 'like', 'RC%')
-            ->orderBy('CVE_FCONTAB', 'desc')
+            ->whereDate('CVE_FEMISION', $this->fecha)
+            ->orderBy('CVE_FEMISION', 'desc') // Ordenar primero por fecha en orden descendente
+            ->orderBy('IdentComp', 'desc') // Luego ordenar por identificador de recibo en orden descendente
             ->first();
-
-        $this->ultimaReciboCliente = $ultimaReciboCliente->IdentComp;
-        $this->ultimaRecivoFecha = $ultimaReciboCliente->CVE_FCONTAB;
+                
+                if ($ultimaReciboCliente) {
+                    $this->ultimaReciboCliente = $ultimaReciboCliente->IdentComp;
+                    $this->ultimaRecivoFecha = $ultimaReciboCliente->CVE_FEMISION;
+                } else {
+                    // Si no se encuentra ningún recibo para la fecha seleccionada
+                    $this->ultimaReciboCliente = null;
+                    $this->ultimaRecivoFecha = null;
+                }
+        } elseif($this->cliID){
+            $ultimaReciboCliente = DB::table('dbo.QRY_VENTASCOBROS')
+                ->select('CVE_FEMISION', 'IdentComp')
+                ->where('CVECLI_CODIN', $this->cliID)
+                ->where('IdentComp', 'like', 'RC%')
+                ->orderBy('CVE_FEMISION', 'desc')
+                ->first();
+                
+                if ($ultimaReciboCliente) {
+                    $this->ultimaReciboCliente = $ultimaReciboCliente->IdentComp;
+                    $this->ultimaRecivoFecha = $ultimaReciboCliente->CVE_FEMISION;
+                } else {
+                    // Si no se encuentra ningún recibo para la fecha seleccionada
+                    $this->ultimaReciboCliente = null;
+                    $this->ultimaRecivoFecha = null;
+                }
+        }
     }
 }
+
+    public function consultarRecibosCliente($idCliente){
+        return DB::table('dbo.QRY_VENTASCOBROS')
+    ->where('CVECLI_CODIN', '=',$idCliente)
+    ->select(['CVE_FEMISION','IdentComp'])
+    ->orderBy('CVE_FEMISION', 'asc')
+    ->get();
+    }
 
     public function cargarArchivo()
     {
@@ -166,9 +202,10 @@ protected function procesarArchivoExcel()
     // Obtener la hoja activa del archivo Excel
     $sheet = $spreadsheet->getActiveSheet();
 
-    // Obtener las filas como un array asociativo
     $contenido = [];
+    $this->numerosGenerados = [];
     $encabezados = [];
+    $numerosGenerados = [];
     $primerosNumeros = substr($this->ultimaReciboCliente, 3, 5);
     $ultimoNumeroReciboGeneral = intval(substr($this->ultimaReciboCliente, 11, 8));
     $ultimoNumeroReciboPorCliente = [];
@@ -213,10 +250,10 @@ protected function procesarArchivoExcel()
 
                         // Obtiene la ultima factura del cliente
                         $ultimaFacturaCliente = DB::table('dbo.QRY_VENTASCOBROS')
-                        ->select('CVE_FCONTAB', 'IdentComp')
-                        ->where('CLI_CUIT', $cliente->cli_CUIT)
+                        ->select('CVE_FEMISION', 'IdentComp')
+                        ->where('CVECLI_CODIN', $cliente->cli_Cod)
                         ->where('IdentComp', 'like', 'FC%')
-                        ->orderBy('CVE_FCONTAB', 'desc')
+                        ->orderBy('CVE_FEMISION', 'desc')
                         ->first();
                         
                         if (!$ultimaFacturaCliente) {
@@ -229,15 +266,17 @@ protected function procesarArchivoExcel()
                         }
 
                         $ultimaFactura = $ultimaFacturaCliente->IdentComp;
-                        $ultimaFacturaClienteFecha = $ultimaFacturaCliente->CVE_FCONTAB;
+                        $ultimaFacturaClienteFecha = $ultimaFacturaCliente->CVE_FEMISION;
                         $carbonDate = \Carbon\Carbon::parse($ultimaFacturaClienteFecha);
-                        // Obtener la fecha formateada
-                        $fechaFormateada = $carbonDate->toDateString();
-
+                        
+                        // formatear a fecha de tipo aaaammdd
+                        $fechaFormateada = $carbonDate->format('Ymd');
+                        
                         // Verificar si se encontró un cliente antes de asignar valores
                         if ($cliente) {
+                            
                             $ultimoNumeroReciboGeneral = $ultimoNumeroReciboGeneral + 1;
-
+                            $this->numerosGenerados[] = $ultimoNumeroReciboGeneral;
                             // Formar el nuevo IdentComp
                             $nuevoIdentComp = 'RC ' . $primerosNumeros . '-' . str_pad($ultimoNumeroReciboGeneral, 8, '0', STR_PAD_LEFT);
 
@@ -249,12 +288,20 @@ protected function procesarArchivoExcel()
                             $direccion = $cliente->cli_Direc;
                             $localidad = $cliente->cli_Loc;
 
-                            // Verificar si la dirección contiene una coma y "CABA"
-                            if (strpos($direccion, ',') !== false && (stripos($direccion, 'CABA') !== false || stripos($direccion, 'CAPITAL FEDERAL') !== false)) {
+                            if (strpos($direccion, ',') !== false) {
                                 // Dividir la dirección usando la coma y obtener la segunda parte
                                 $partesDireccion = explode(',', $direccion);
-                                $localidad = trim($partesDireccion[1]);
-                            }                                
+                                $posibleLocalidad = trim($partesDireccion[1]);
+                            
+                                // Verificar si la segunda parte de la dirección es "CABA"
+                                if (strcasecmp($posibleLocalidad, "CABA") === 0) {
+                                    // Si es "CABA", establecer la localidad como "CABA"
+                                    $localidad = "CABA";
+                                } elseif (empty($localidad) || !$localidad) { // Ajuste aquí
+                                    // Si $localidad está vacío o no tiene valor asignado, establecerlo como la parte después de la coma en la dirección
+                                    $localidad = $posibleLocalidad;
+                                }
+                            }
                     
                             // Agregar los datos del cliente al array $rowContent
                             $rowContent = array_merge($rowContent, [
@@ -263,7 +310,7 @@ protected function procesarArchivoExcel()
                                 'RSOC' => $cliente->cli_RazSoc, 
                                 'DIRECCION' => $direccion,
                                 'LOCALIDAD' => $localidad,
-                                'ULTIMA_FACTURA' => $ultimaFacturaFecha,
+                                'ULTIMA_FACTURA' => $fechaFormateada,
                                 'ULTIMO_RECIBO_IDENTCOMP' => $ultimaFacturaIdentComp,
                                 'ULTIMA_FACTURA_IDENTCOMP' => $ultimaFactura,
                             ]);
@@ -272,7 +319,7 @@ protected function procesarArchivoExcel()
                 }
             }
         }
-        
+
         // Agregar la fila solo si no es la primera fila (encabezados)
         if ($row->getRowIndex() > 1 && !empty(array_filter($rowContent))) {
             // Buscar el cliente correspondiente en el array de clientesEncontrados
@@ -286,9 +333,54 @@ protected function procesarArchivoExcel()
             $contenido[] = array_merge($rowContent);
         }
     }  
+    
+    // Después de procesar todos los clientes, generamos el archivo Excel con los números generados
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setCellValue('A1', 'Números Generados');
+
+    // Llenar las celdas con los números generados
+    foreach ($numerosGenerados as $index => $numero) {
+        $sheet->setCellValue('A' . ($index + 2), $numero);
+    }
+
+    // Crear el archivo Excel en un directorio temporal
+    $tempFilePath = tempnam(sys_get_temp_dir(), 'numeros_generados_');
+    $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+    $writer->save($tempFilePath);
+
+    // Descargar el archivo Excel como respuesta
+    $this->descargarArchivoNumeros($tempFilePath);
+
+    // Retornar el contenido
     return $contenido;
 }
 
+    public function descargarNumerosExcel()
+    {
+        // Crear un nuevo objeto Spreadsheet
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Agregar los números generados a la hoja de cálculo
+        foreach ($this->numerosGenerados as $index => $numero) {
+            $sheet->setCellValue('A' . ($index + 1), $numero);
+        }
+
+        // Crear el archivo Excel en un directorio temporal
+        $tempFilePath = tempnam(sys_get_temp_dir(), 'numeros_generados_');
+        $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xlsx');
+        $writer->save($tempFilePath);
+
+        // Descargar el archivo Excel como respuesta
+        return response()->download($tempFilePath, 'numeros_generados.xlsx')->deleteFileAfterSend(true);
+    }
+
+public function descargarArchivoNumeros($tempFilePath)
+{
+    // Descargar el archivo Excel como respuesta
+    return response()->download($tempFilePath, 'numeros_generados.xlsx')->deleteFileAfterSend(true);
+}
     public function consultarBase($id){
         // Obtener la informacion del cliente por su id
         $query = DB::table('clientes')->where('cli_Cod','=',$id)->get();
@@ -442,9 +534,7 @@ protected function procesarArchivoExcel()
             $codigoRecibo = substr($operacion, 3, 5); // Obtener el código de recibo
             $codigoRecibo = ltrim($codigoRecibo, '0');
             $codigoRecibo = str_pad($codigoRecibo, 4, '0', STR_PAD_LEFT);
-      
             $numeroRecibo = substr($operacion, 8); // Obtener el número de recibo sin el primer 0
-
             $numeroRecibo = str_pad($numeroRecibo, 8, '0', STR_PAD_LEFT);
             // Construir el nuevo formato
             $nuevoOperacion = $prefix . ' ' . $codigoRecibo . $numeroRecibo;
@@ -510,9 +600,11 @@ protected function procesarArchivoExcel()
             if (strpos($factura, 'FC B') !== false) {
                 // Si la factura contiene 'FC B', asignar '5' a $dig
                 $dig = '5';
+                $cliTipo = '3'; // Consumidor final
             } elseif (strpos($factura, 'FC A') !== false) {
                 // Si la factura contiene 'FC A', asignar '1' a $dig
                 $dig = '1';
+                $cliTipo = '1';// Cliente Inscripto
             }
 
             // Separar el código de recibo y el número
@@ -535,8 +627,8 @@ protected function procesarArchivoExcel()
             // Asegurar que la cadena tenga al menos 41 caracteres
             $rsoc = mb_str_pad($rsoc, 41, ' ', STR_PAD_RIGHT, 'UTF-8');
             $direccion = mb_str_pad($linea['DIRECCION'],38,' ', STR_PAD_RIGHT, 'UTF-8');
-            $localidad = str_pad($linea['LOCALIDAD'],70,' ', STR_PAD_RIGHT);
-            $zona= $linea['LOCALIDAD'] == 'CABA'? '11': '21';
+            $localidad = mb_str_pad($linea['LOCALIDAD'], 70, ' ', STR_PAD_RIGHT, 'UTF-8');
+            $zona= $linea['LOCALIDAD'] == 'CABA'? '1'. $cliTipo : '2'.$cliTipo;
             // Formatear IMPACTA con una longitud de 8 (formato aaaammdd)
             // Convertir IMPORTE a un número de punto flotante
             $importe = floatval(str_replace(',', '.', str_replace('.', '', $linea['IMPORTE'])));
@@ -548,7 +640,9 @@ protected function procesarArchivoExcel()
         }
         return $contenidoTxt;
     }
-
+    //
+    // archivo relacco
+    //
     public function generarContenidoArchivo3(){
         $contenidoTxt= "";
         $esp4 = str_repeat(' ', 4);
@@ -582,7 +676,7 @@ protected function procesarArchivoExcel()
                 $fc= str_repeat(' ',17);
             }
             $impacta = \Carbon\Carbon::parse($linea['IMPACTA'])->format('Ymd');
-            $impacta2 = str_pad($impacta,'12',' ',STR_PAD_RIGHT);
+            $impacta2 = str_pad($linea['ULTIMA_FACTURA'],'12',' ',STR_PAD_RIGHT);
             $id = $linea['ID'];
             $id = str_pad($id, '6', '0', STR_PAD_LEFT);
             $importe = floatval(str_replace(',', '.', str_replace('.', '', $linea['IMPORTE'])));

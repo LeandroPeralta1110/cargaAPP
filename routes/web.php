@@ -5,6 +5,7 @@ use App\Http\Controllers\CrudClient as ControllersCrudClient;
 use App\Http\Controllers\pruebaController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Livewire\CargaArchivo;
+use App\Http\Livewire\ArchivosFrances;
 use App\Http\Livewire\Cobranzas;
 use Illuminate\Support\Facades\Auth;
 
@@ -19,7 +20,7 @@ use Illuminate\Support\Facades\Auth;
 |
 */
 Route::get('/', CargaArchivo::class)->name('cargar-archivo');
-Route::get('/alta-proveedores/banco-frances', CargaArchivo::class)->name('cargar-archivo-frances');
+Route::get('/alta-proveedores/banco-frances', ArchivosFrances::class)->name('archivo-frances');
 Route::get('/cobranzas', Cobranzas::class)->name('cobranzas');
 Route::resource('clients', clientController::class);
 Auth::routes();
