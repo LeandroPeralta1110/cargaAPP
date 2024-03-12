@@ -39,18 +39,17 @@ class Cobranzas extends Component
 {
     $fechaActual = Carbon::now();
 
-    $ultimoRecibo = DB::table('dbo.CabMovF')
-                    ->where('cmf_Desc', 'like', 'RC%')
-                    ->whereDate('cmf_FMov', '<=', $fechaActual)
-                    ->orderByDesc('cmf_FMov')
-                    ->first(['cmf_Desc', 'cmf_FMov']);
+    $ultimoRecibo = DB::table('QRY_VENTASCOBROS')
+                    ->select('CVE_FEMISION', 'IdentComp')
+                    ->where('CVETCO_COD', 'RC')
+                    ->whereDate('CVE_FEMISION', '<=', $fechaActual)
+                    ->orderByDesc('CVE_FEMISION')
+                    ->limit(1)
+                    ->get();
 
-    if ($ultimoRecibo) {
-        // Dividir el texto en partes usando el espacio como delimitador
-        $recibo = substr($ultimoRecibo->cmf_Desc, 0, 18);
-
-        $this->ultimaReciboCliente = $recibo;
-        $this->ultimaRecivoFecha = $ultimoRecibo->cmf_FMov;
+    if ($ultimoRecibo->isNotEmpty()) {
+        $this->ultimaReciboCliente = $ultimoRecibo[0]->IdentComp;
+        $this->ultimaRecivoFecha = $ultimoRecibo[0]->CVE_FEMISION;
     }
 }
 
@@ -104,7 +103,7 @@ class Cobranzas extends Component
                     $this->ultimaRecivoFecha = null;
                 }
         } elseif($this->cliID){
-            $ultimaReciboCliente = DB::table('dbo.QRY_VENTASCOBROS')
+            $ultimaReciboCliente = DB::table('dbo.QRY_VENTASCOBROS')        
                 ->select('CVE_FEMISION', 'IdentComp')
                 ->where('CVECLI_CODIN', $this->cliID)
                 ->where('IdentComp', 'like', 'RC%')
@@ -124,18 +123,18 @@ class Cobranzas extends Component
         $this->clinombre ='';
         $this->cliCuit ='';
         $fechaActual = Carbon::now();
-        $ultimoRecibo = DB::table('dbo.CabMovF')
-                    ->where('cmf_Desc', 'like', 'RC%')
-                    ->whereDate('cmf_FMov', '<=', $fechaActual)
-                    ->orderByDesc('cmf_FMov')
-                    ->first(['cmf_Desc', 'cmf_FMov']);
 
-    if ($ultimoRecibo) {
-        // Dividir el texto en partes usando el espacio como delimitador
-        $recibo = substr($ultimoRecibo->cmf_Desc, 0, 18);
+    $ultimoRecibo = DB::table('QRY_VENTASCOBROS')
+                    ->select('CVE_FEMISION', 'IdentComp')
+                    ->where('CVETCO_COD', 'RC')
+                    ->whereDate('CVE_FEMISION', '<=', $fechaActual)
+                    ->orderByDesc('CVE_FEMISION')
+                    ->limit(1)
+                    ->get();
 
-        $this->ultimaReciboCliente = $recibo;
-        $this->ultimaRecivoFecha = $ultimoRecibo->cmf_FMov;
+    if ($ultimoRecibo->isNotEmpty()) {
+        $this->ultimaReciboCliente = $ultimoRecibo[0]->IdentComp;
+        $this->ultimaRecivoFecha = $ultimoRecibo[0]->CVE_FEMISION;
     }
     }
 }
