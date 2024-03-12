@@ -35,6 +35,25 @@ class Cobranzas extends Component
     public $fecha;
     public $recibosCliente = [];
 
+    public function mount()
+{
+    $fechaActual = Carbon::now();
+
+    $ultimoRecibo = DB::table('dbo.CabMovF')
+                    ->where('cmf_Desc', 'like', 'RC%')
+                    ->whereDate('cmf_FMov', '<=', $fechaActual)
+                    ->orderByDesc('cmf_FMov')
+                    ->first(['cmf_Desc', 'cmf_FMov']);
+
+    if ($ultimoRecibo) {
+        // Dividir el texto en partes usando el espacio como delimitador
+        $recibo = substr($ultimoRecibo->cmf_Desc, 0, 18);
+
+        $this->ultimaReciboCliente = $recibo;
+        $this->ultimaRecivoFecha = $ultimoRecibo->cmf_FMov;
+    }
+}
+
     public function index(){
     return DB::table('dbo.QRY_VENTASCOBROS')
     ->where('CLI_CUIT', '=', '30516492747')
@@ -54,7 +73,7 @@ class Cobranzas extends Component
     $datosClientes = $this->consultarBase($idCliente);
     
     // Verificar si hay al menos un cliente en la colección
-    if ($datosClientes->isNotEmpty()) {
+    if ($datosClientes->isNotEmpty() && $datosClientes->first()->cli_RazSoc != '000000') {
         // Obtener el primer cliente de la colección
         $primerCliente = $datosClientes->first();
         
@@ -101,6 +120,23 @@ class Cobranzas extends Component
                     $this->ultimaRecivoFecha = null;
                 }
         }
+    } else {
+        $this->clinombre ='';
+        $this->cliCuit ='';
+        $fechaActual = Carbon::now();
+        $ultimoRecibo = DB::table('dbo.CabMovF')
+                    ->where('cmf_Desc', 'like', 'RC%')
+                    ->whereDate('cmf_FMov', '<=', $fechaActual)
+                    ->orderByDesc('cmf_FMov')
+                    ->first(['cmf_Desc', 'cmf_FMov']);
+
+    if ($ultimoRecibo) {
+        // Dividir el texto en partes usando el espacio como delimitador
+        $recibo = substr($ultimoRecibo->cmf_Desc, 0, 18);
+
+        $this->ultimaReciboCliente = $recibo;
+        $this->ultimaRecivoFecha = $ultimoRecibo->cmf_FMov;
+    }
     }
 }
 
@@ -211,6 +247,9 @@ protected function procesarArchivoExcel()
     $ultimoNumeroReciboPorCliente = [];
 
     foreach ($sheet->getRowIterator() as $row) {
+        // Inicializar la bandera que indica si el cliente tiene factura
+        $clienteTieneFactura = true;
+    
         $cellIterator = $row->getCellIterator();
         $cellIterator->setIterateOnlyExistingCells(FALSE); // Permitir celdas vacías
     
@@ -233,7 +272,7 @@ protected function procesarArchivoExcel()
                     $rowContent[$currentHeader] = $formattedDate;
                 } else {
                     $rowContent[$currentHeader] = $cellValue;
-
+    
                     // Quitar el símbolo de peso del campo 'IMPORTE'
                     if ($currentHeader === 'IMPORTE') {
                         $rowContent[$currentHeader] = str_replace('$ ', '', $cellValue);
@@ -242,27 +281,39 @@ protected function procesarArchivoExcel()
                     if ($currentHeader === 'ID') {
                         $idCliente = $cellValue;
                         $idCliente = str_pad($cellValue, 6, '0', STR_PAD_LEFT);
-                    
+                        
+                        // Obtener la fecha del encabezado SERV.
+                        $fechaServ = $rowContent['SERV.'];
+                        // Obtener el año y el mes de la fecha SERV.
+                        $parts = explode('-', $fechaServ);
+                        $mesServ = Carbon::parse($parts[0])->month;
+                        $anioServ = '20' . $parts[1]; // Suponiendo que los años se encuentran en el formato YY
+    
                         // Realizar la consulta a la base de datos
                         $clienteCollection = $this->consultarBase($idCliente);
                         // Obtener el primer elemento de la colección (Illuminate\Support\Collection)
                         $cliente = $clienteCollection->first();
-
-                        // Obtiene la ultima factura del cliente
+    
+                        // Obtener la última factura del cliente para el mes y año de SERV.
                         $ultimaFacturaCliente = DB::table('dbo.QRY_VENTASCOBROS')
-                        ->select('CVE_FEMISION', 'IdentComp')
-                        ->where('CVECLI_CODIN', $cliente->cli_Cod)
-                        ->where('IdentComp', 'like', 'FC%')
-                        ->orderBy('CVE_FEMISION', 'desc')
-                        ->first();
+                            ->select('CVE_FEMISION', 'IdentComp')
+                            ->where('CVECLI_CODIN', $cliente->cli_Cod)
+                            ->where('IdentComp', 'like', 'FC%')
+                            ->whereYear('CVE_FEMISION', $anioServ)
+                            ->whereMonth('CVE_FEMISION', $mesServ)
+                            ->orderBy('CVE_FEMISION', 'desc')
+                            ->first();
                         
                         if (!$ultimaFacturaCliente) {
-                            // El cliente no tiene facturas, agregar a la lista y continuar con el siguiente cliente
+                            // El cliente no tiene facturas, establecer la bandera en false
+                            $clienteTieneFactura = false;
+
                             $this->sinFactura[] = [
                                 'ID' => $idCliente,
                                 'Nombre' => optional($cliente)->cli_RazSoc,  // Puedes ajustar el campo Nombre según tu estructura de datos
                             ];
-                            continue;  // Salir del bucle actual y pasar al siguiente cliente
+
+                            break;
                         }
 
                         $ultimaFactura = $ultimaFacturaCliente->IdentComp;
@@ -321,7 +372,7 @@ protected function procesarArchivoExcel()
         }
 
         // Agregar la fila solo si no es la primera fila (encabezados)
-        if ($row->getRowIndex() > 1 && !empty(array_filter($rowContent))) {
+        if ($clienteTieneFactura && $row->getRowIndex() > 1 && !empty(array_filter($rowContent))) {
             // Buscar el cliente correspondiente en el array de clientesEncontrados
 /*             $cliente = collect($this->clientesEncontrados)->where('email', $rowContent['CLIENTE'])->first();
  */            
