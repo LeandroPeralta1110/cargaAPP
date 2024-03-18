@@ -34,24 +34,27 @@ class Cobranzas extends Component
     public $cliID;
     public $fecha;
     public $recibosCliente = [];
+    public $clienteSeleccionado;
+    public $mostrarPopUp;
+    public $facturasLibres;
 
     public function mount()
-{
-    $fechaActual = Carbon::now();
+    {
+        $fechaActual = Carbon::now();
 
-    $ultimoRecibo = DB::table('QRY_VENTASCOBROS')
-                    ->select('CVE_FEMISION', 'IdentComp')
-                    ->where('CVETCO_COD', 'RC')
-                    ->whereDate('CVE_FEMISION', '<=', $fechaActual)
-                    ->orderByDesc('CVE_FEMISION')
-                    ->limit(1)
-                    ->get();
+        $ultimoRecibo = DB::table('QRY_VENTASCOBROS')
+                        ->select('CVE_FEMISION', 'IdentComp')
+                        ->where('CVETCO_COD', 'RC')
+                        ->whereDate('CVE_FEMISION', '<=', $fechaActual)
+                        ->orderByDesc('IdentComp')
+                        ->limit(1)
+                        ->get();
 
-    if ($ultimoRecibo->isNotEmpty()) {
-        $this->ultimaReciboCliente = $ultimoRecibo[0]->IdentComp;
-        $this->ultimaRecivoFecha = $ultimoRecibo[0]->CVE_FEMISION;
+        if ($ultimoRecibo->isNotEmpty()) {
+            $this->ultimaReciboCliente = $ultimoRecibo[0]->IdentComp;
+            $this->ultimaRecivoFecha = $ultimoRecibo[0]->CVE_FEMISION;
+        }
     }
-}
 
     public function index(){
     return DB::table('dbo.QRY_VENTASCOBROS')
@@ -64,85 +67,85 @@ class Cobranzas extends Component
     }
     
     public function actualizarTabla()
-{
-    // Formatear el número de operación con ceros a la izquierda
-    $idCliente = str_pad($this->numeroOperacion, 6, '0', STR_PAD_LEFT);
+    {
+        // Formatear el número de operación con ceros a la izquierda
+        $idCliente = str_pad($this->numeroOperacion, 6, '0', STR_PAD_LEFT);
 
-    // Consultar la base de datos
-    $datosClientes = $this->consultarBase($idCliente);
-    
-    // Verificar si hay al menos un cliente en la colección
-    if ($datosClientes->isNotEmpty() && $datosClientes->first()->cli_RazSoc != '000000') {
-        // Obtener el primer cliente de la colección
-        $primerCliente = $datosClientes->first();
+        // Consultar la base de datos
+        $datosClientes = $this->consultarBase($idCliente);
         
-        // Obtener el cli_CUIT del primer cliente
-        $this->cliCuit = $primerCliente->cli_CUIT;
-        $this->clinombre = $primerCliente->cli_RazSoc;
-        $this->cliID = $primerCliente->cli_Cod;
-        
-        $this->recibosCliente = $this->consultarRecibosCliente($this->cliID);
-
-        if($this->cliID && $this->fecha){
-            // Consultar el último recibo del cliente utilizando el cli_CUIT y la fecha seleccionada
-            $ultimaReciboCliente = DB::table('dbo.QRY_VENTASCOBROS')
-            ->select('CVE_FEMISION', 'IdentComp')
-            ->where('CVECLI_CODIN', $this->cliID)
-            ->where('IdentComp', 'like', 'RC%')
-            ->whereDate('CVE_FEMISION', $this->fecha)
-            ->orderBy('CVE_FEMISION', 'desc') // Ordenar primero por fecha en orden descendente
-            ->orderBy('IdentComp', 'desc') // Luego ordenar por identificador de recibo en orden descendente
-            ->first();
-                
-                if ($ultimaReciboCliente) {
-                    $this->ultimaReciboCliente = $ultimaReciboCliente->IdentComp;
-                    $this->ultimaRecivoFecha = $ultimaReciboCliente->CVE_FEMISION;
-                } else {
-                    // Si no se encuentra ningún recibo para la fecha seleccionada
-                    $this->ultimaReciboCliente = null;
-                    $this->ultimaRecivoFecha = null;
-                }
-        } elseif($this->cliID){
-            $ultimaReciboCliente = DB::table('dbo.QRY_VENTASCOBROS')        
+        // Verificar si hay al menos un cliente en la colección
+        if ($datosClientes->isNotEmpty() && $datosClientes->first()->cli_RazSoc != '000000') {
+            // Obtener el primer cliente de la colección
+            $primerCliente = $datosClientes->first();
+            
+            // Obtener el cli_CUIT del primer cliente
+            $this->cliCuit = $primerCliente->cli_CUIT;
+            $this->clinombre = $primerCliente->cli_RazSoc;
+            $this->cliID = $primerCliente->cli_Cod;
+            
+            $this->recibosCliente = $this->consultarRecibosCliente($this->cliID);
+            
+            if($this->cliID && $this->fecha){
+                // Consultar el último recibo del cliente utilizando el cli_CUIT y la fecha seleccionada
+                $ultimaReciboCliente = DB::table('dbo.QRY_VENTASCOBROS')
                 ->select('CVE_FEMISION', 'IdentComp')
                 ->where('CVECLI_CODIN', $this->cliID)
                 ->where('IdentComp', 'like', 'RC%')
-                ->orderBy('CVE_FEMISION', 'desc')
+                ->whereDate('CVE_FEMISION', $this->fecha)
+                ->orderBy('CVE_FEMISION', 'desc') // Ordenar primero por fecha en orden descendente
+                ->orderBy('IdentComp', 'desc') // Luego ordenar por identificador de recibo en orden descendente
                 ->first();
-                
-                if ($ultimaReciboCliente) {
-                    $this->ultimaReciboCliente = $ultimaReciboCliente->IdentComp;
-                    $this->ultimaRecivoFecha = $ultimaReciboCliente->CVE_FEMISION;
-                } else {
-                    // Si no se encuentra ningún recibo para la fecha seleccionada
-                    $this->ultimaReciboCliente = null;
-                    $this->ultimaRecivoFecha = null;
-                }
-        }
-    } else {
-        $this->clinombre ='';
-        $this->cliCuit ='';
-        $fechaActual = Carbon::now();
-
-    $ultimoRecibo = DB::table('QRY_VENTASCOBROS')
+                    
+                    if ($ultimaReciboCliente) {
+                        $this->ultimaReciboCliente = $ultimaReciboCliente->IdentComp;
+                        $this->ultimaRecivoFecha = $ultimaReciboCliente->CVE_FEMISION;
+                    } else {
+                        // Si no se encuentra ningún recibo para la fecha seleccionada
+                        $this->ultimaReciboCliente = null;
+                        $this->ultimaRecivoFecha = null;
+                    }
+            } elseif($this->cliID){
+                $ultimaReciboCliente = DB::table('dbo.QRY_VENTASCOBROS')        
                     ->select('CVE_FEMISION', 'IdentComp')
-                    ->where('CVETCO_COD', 'RC')
-                    ->whereDate('CVE_FEMISION', '<=', $fechaActual)
-                    ->orderByDesc('CVE_FEMISION')
-                    ->limit(1)
-                    ->get();
+                    ->where('CVECLI_CODIN', $this->cliID)
+                    ->where('IdentComp', 'like', 'RC%')
+                    ->orderBy('CVE_FEMISION', 'desc')
+                    ->first();
+                    
+                    if ($ultimaReciboCliente) {
+                        $this->ultimaReciboCliente = $ultimaReciboCliente->IdentComp;
+                        $this->ultimaRecivoFecha = $ultimaReciboCliente->CVE_FEMISION;
+                    } else {
+                        // Si no se encuentra ningún recibo para la fecha seleccionada
+                        $this->ultimaReciboCliente = null;
+                        $this->ultimaRecivoFecha = null;
+                    }
+            }
+        } else {
+            $this->clinombre ='';
+            $this->cliCuit ='';
+            $fechaActual = Carbon::now();
 
-    if ($ultimoRecibo->isNotEmpty()) {
-        $this->ultimaReciboCliente = $ultimoRecibo[0]->IdentComp;
-        $this->ultimaRecivoFecha = $ultimoRecibo[0]->CVE_FEMISION;
+        $ultimoRecibo = DB::table('QRY_VENTASCOBROS')
+                        ->select('CVE_FEMISION', 'IdentComp')
+                        ->where('CVETCO_COD', 'RC')
+                        ->whereDate('CVE_FEMISION', '<=', $fechaActual)
+                        ->orderByDesc('IdentComp')
+                        ->limit(1)
+                        ->get();
+
+        if ($ultimoRecibo->isNotEmpty()) {
+            $this->ultimaReciboCliente = $ultimoRecibo[0]->IdentComp;
+            $this->ultimaRecivoFecha = $ultimoRecibo[0]->CVE_FEMISION;
+        }
+        }
     }
-    }
-}
 
     public function consultarRecibosCliente($idCliente){
         return DB::table('dbo.QRY_VENTASCOBROS')
     ->where('CVECLI_CODIN', '=',$idCliente)
-    ->select(['CVE_FEMISION','IdentComp'])
+    ->select(['CVECLI_CODIN','CVE_FEMISION','IdentComp'])
     ->orderBy('CVE_FEMISION', 'asc')
     ->get();
     }
@@ -244,6 +247,7 @@ protected function procesarArchivoExcel()
     $primerosNumeros = substr($this->ultimaReciboCliente, 3, 5);
     $ultimoNumeroReciboGeneral = intval(substr($this->ultimaReciboCliente, 11, 8));
     $ultimoNumeroReciboPorCliente = [];
+    $this->sinFactura = [];
 
     foreach ($sheet->getRowIterator() as $row) {
         // Inicializar la bandera que indica si el cliente tiene factura
@@ -292,16 +296,48 @@ protected function procesarArchivoExcel()
                         $clienteCollection = $this->consultarBase($idCliente);
                         // Obtener el primer elemento de la colección (Illuminate\Support\Collection)
                         $cliente = $clienteCollection->first();
-    
+                        
+                        $codCli = $cliente->cli_Cod;
                         // Obtener la última factura del cliente para el mes y año de SERV.
-                        $ultimaFacturaCliente = DB::table('dbo.QRY_VENTASCOBROS')
+                        $ultimaFacturaCliente = DB::table('dbo.QRY_VENTASCOBROS AS f')
+                        ->select('f.CVE_FEMISION', 'f.IdentComp')
+                        ->leftJoin('dbo.QRY_RELCOMPVENTAS AS r', function ($join) use ($codCli) {
+                            $join->on('r.IdentComp1', '=', 'f.IdentComp')
+                                 ->where('r.cve_CodCli1', '=', $codCli);
+                        })
+                        ->where('f.CVECLI_CODIN', $cliente->cli_Cod)
+                        ->where('f.IdentComp', 'like', 'FC%')
+                        ->whereYear('f.CVE_FEMISION', $anioServ)
+                        ->whereMonth('f.CVE_FEMISION', $mesServ)
+                        ->whereNull('r.IdentComp2') // Filtrar solo facturas sin recibo
+                        ->orderBy('f.CVE_FEMISION', 'desc')
+                        ->first();
+                        
+                        /* DB::table('dbo.QRY_VENTASCOBROS AS f')
+                        ->select('f.CVE_FEMISION', 'f.IdentComp')
+                        ->leftJoin('dbo.QRY_RELCOMPVENTAS AS r', function ($join) {
+                            $join->on('r.IdentComp1', '=', 'f.IdentComp')
+                                 ->where('r.cve_CodCli1', '=', 'f.CVECLI_CODIN')
+                                 ->where('r.IdentComp2', 'like', 'RC%');
+                        })
+                        ->where('f.CVECLI_CODIN', $cliente->cli_Cod)
+                        ->where('f.IdentComp', 'like', 'FC%')
+                        ->whereYear('f.CVE_FEMISION', $anioServ)
+                        ->whereMonth('f.CVE_FEMISION', $mesServ)
+                        ->whereNull('r.IdentComp2') // Filtrar solo facturas sin recibo
+                        ->orderBy('f.CVE_FEMISION', 'desc')
+                        ->first(); */
+
+                        
+                        
+                        /* DB::table('dbo.QRY_VENTASCOBROS')
                             ->select('CVE_FEMISION', 'IdentComp')
                             ->where('CVECLI_CODIN', $cliente->cli_Cod)
                             ->where('IdentComp', 'like', 'FC%')
                             ->whereYear('CVE_FEMISION', $anioServ)
                             ->whereMonth('CVE_FEMISION', $mesServ)
                             ->orderBy('CVE_FEMISION', 'desc')
-                            ->first();
+                            ->first(); */
                         
                         if (!$ultimaFacturaCliente) {
                             // El cliente no tiene facturas, establecer la bandera en false
@@ -383,7 +419,7 @@ protected function procesarArchivoExcel()
             $contenido[] = array_merge($rowContent);
         }
     }  
-    
+   
     // Después de procesar todos los clientes, generamos el archivo Excel con los números generados
     $spreadsheet = new Spreadsheet();
     $sheet = $spreadsheet->getActiveSheet();
@@ -750,6 +786,183 @@ public function descargarArchivoNumeros($tempFilePath)
         file_put_contents($archivoTemporal, $contenido);
         $zip->addFile($archivoTemporal, $nombreArchivo);
     }
+
+    public function abrirPopup($clienteId)
+    {
+        $this->clienteSeleccionado = $clienteId;
+
+        // Obtener las facturas libres del cliente seleccionado
+        $this->facturasLibres = DB::table('dbo.QRY_VENTASCOBROS AS f')
+            ->select('f.CVE_FEMISION', 'f.IdentComp')
+            ->leftJoin('dbo.QRY_RELCOMPVENTAS AS r', function ($join) use ($clienteId) {
+                $join->on('r.IdentComp1', '=', 'f.IdentComp')
+                     ->where('r.cve_CodCli1', '=', $clienteId);
+            })
+            ->where('f.CVECLI_CODIN', $clienteId)
+            ->where('f.IdentComp', 'like', 'FC%')
+            ->whereNull('r.IdentComp2') // Filtrar solo facturas sin recibo
+            ->orderBy('f.CVE_FEMISION', 'desc')
+            ->get();
+
+        $this->mostrarPopUp = true;
+    }
+
+    public function cerrarPopup(){
+        $this->mostrarPopUp = false;
+    }
+
+    public function seleccionarFactura($identificadorFactura, $idCliente)
+    {
+        // Obtener los datos de la factura seleccionada
+        $facturaSeleccionada = DB::table('dbo.QRY_VENTASCOBROS')
+                                ->where('IdentComp', $identificadorFactura)
+                                ->first();
+    
+        $clienteNum = ltrim(strval($idCliente), '0');
+    
+        // Verificar si $this->archivo es un array antes de iterarlo
+        if ($this->archivo) {
+            // Utilizar PhpSpreadsheet para cargar el archivo Excel
+            $spreadsheet = IOFactory::load($this->archivo->getRealPath());
+        
+            // Obtener la hoja activa del archivo Excel
+            $sheet = $spreadsheet->getActiveSheet();
+        
+            // Obtener el iterador de filas
+            $rowIterator = $sheet->getRowIterator();
+        
+            // Avanzar al siguiente fila para omitir la primera fila de encabezados
+            $rowIterator->next();
+        
+      // Iterar sobre las filas
+foreach ($rowIterator as $row) {
+    // Inicializar la bandera que indica si el cliente tiene factura
+    $clienteTieneFactura = true;
+
+    $cellIterator = $row->getCellIterator();
+    $cellIterator->setIterateOnlyExistingCells(FALSE); // Permitir celdas vacías
+
+    $rowContent = [];
+    foreach ($cellIterator as $index => $cell) {
+        // Establecer el formato de la celda para la columna "SERV."
+        if ($index === 0) { // Ajusta el índice según la posición de la columna "SERV."
+            $cell->getStyle()->getNumberFormat()->setFormatCode('mmm-yy'); // Establecer el formato de fecha
+        }
+        
+        // Obtener el valor de la celda formateado
+        $value = $cell->getFormattedValue();
+        // Añadir el valor a $rowContent
+        $rowContent[] = $value;
+    }
+   
+    // Obtener el valor de "ID" y convertirlo a string
+    $clienteId = strval($rowContent[7]);
+
+    // Verificar si el ID del cliente en el archivo coincide con el ID del cliente específico
+    if ($clienteId === $clienteNum) {
+        // Aquí puedes acceder a los datos correspondientes al cliente específico
+        $servicio = $rowContent[0]; // Ajusta el índice según el formato de tu archivo Excel
+        $impacta = $rowContent[1]; // Ajusta el índice según el formato de tu archivo Excel
+        $email = $rowContent[2]; // Ajusta el índice según el formato de tu archivo Excel
+        $suscripcion = $rowContent[3]; // Ajusta el índice según el formato de tu archivo Excel
+        $operacion = $rowContent[4]; // Ajusta el índice según el formato de tu archivo Excel
+        $importe = $rowContent[5]; // Ajusta el índice según el formato de tu archivo Excel
+        $importe = str_replace('$ ', '', $importe);
+        $pago = $rowContent[6];
+    }
+}
+        }
+
+    if ($facturaSeleccionada) {
+        // Obtener el último número registrado en $this->numerosGenerados
+        $ultimoNumeroReciboGeneral = end($this->numerosGenerados);
+        
+        // Sumar 1 al último número de recibo generado
+        $nuevoNumeroRecibo = $ultimoNumeroReciboGeneral + 1;
+
+        // Obtener los datos del cliente
+        $clienteCollection = $this->consultarBase($idCliente);
+        $cliente = $clienteCollection->first();
+        
+        // Obtener la dirección y la localidad del cliente
+        $direccion = $cliente->cli_Direc;
+        $localidad = $cliente->cli_Loc;
+
+        // Verificar si la dirección contiene una coma
+        if (strpos($direccion, ',') !== false) {
+            // Dividir la dirección usando la coma y obtener la segunda parte
+            $partesDireccion = explode(',', $direccion);
+            $posibleLocalidad = trim($partesDireccion[1]);
+        
+            // Verificar si la segunda parte de la dirección es "CABA"
+            if (strcasecmp($posibleLocalidad, "CABA") === 0) {
+                // Si es "CABA", establecer la localidad como "CABA"
+                $localidad = "CABA";
+            } elseif (empty($localidad) || !$localidad) {
+                // Si $localidad está vacío o no tiene valor asignado, establecerlo como la parte después de la coma en la dirección
+                $localidad = $posibleLocalidad;
+            }
+        }
+
+        // Obtener el primeros números del identificador de la última factura del cliente
+        $primerosNumeros = substr($this->ultimaReciboCliente, 3, 5);
+
+        // Generar el nuevo identificador del recibo
+        $nuevoIdentComp = 'RC ' . $primerosNumeros . '-' . str_pad($nuevoNumeroRecibo, 8, '0', STR_PAD_LEFT);
+
+       // Mapear los nombres de los meses en inglés a español
+        $meses = [
+            'January' => 'Ene',
+            'February' => 'Feb',
+            'March' => 'Mar',
+            'April' => 'Abr',
+            'May' => 'May',
+            'June' => 'Jun',
+            'July' => 'Jul',
+            'August' => 'Ago',
+            'September' => 'Sep',
+            'October' => 'Oct',
+            'November' => 'Nov',
+            'December' => 'Dic',
+        ];
+
+        // Obtener la fecha formateada
+        $fechaFormateada = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s.u', $facturaSeleccionada->CVE_FEMISION)->format('F-y');
+
+        // Reemplazar el nombre del mes en inglés con su equivalente en español
+        $fechaFormateada = strtr($fechaFormateada, $meses);
+
+        $fechaFormateadaPago = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s.u', $facturaSeleccionada->CVE_FEMISION)->format('Ymd');
+
+// Agregar los datos del cliente y la factura al array $rowContent
+$rowContent = [
+    'SERV.' => $fechaFormateada,
+            'IMPACTA' => $impacta,
+            'CLIENTE' => $email,
+            'SUSCRIPCION' => $suscripcion, // Aquí debes obtener el dato correspondiente del archivo proporcionado por el usuario
+            'OPERACIÓN' => $operacion, // Aquí debes obtener el dato correspondiente del archivo proporcionado por el usuario
+            'IMPORTE' => $importe, // Aquí debes obtener el dato correspondiente del archivo proporcionado por el usuario
+            'PAGO' => $pago, // Aquí debes obtener el dato correspondiente del archivo proporcionado por el usuario
+            'ID' => $cliente->cli_Cod,
+            'CUIT' => $cliente->cli_CUIT,
+            'RSOC' => $cliente->cli_RazSoc, 
+            'DIRECCION' => $direccion,
+            'LOCALIDAD' => $localidad,
+            'ULTIMA_FACTURA' => $fechaFormateadaPago, 
+            'ULTIMO_RECIBO_IDENTCOMP' => $nuevoIdentComp, // Aquí debes generar el nuevo identificador del recibo
+            'ULTIMA_FACTURA_IDENTCOMP' => $facturaSeleccionada->IdentComp,
+            'Columna_I' => '', // Aquí debes obtener el dato correspondiente del archivo proporcionado por el usuario
+        ];
+
+        // Agregar los datos al archivo contenidoArchivo
+        $this->contenidoArchivo[] = $rowContent;
+        // Eliminar el cliente seleccionado de la lista de clientes sin factura
+    $this->sinFactura = array_filter($this->sinFactura, function ($cliente) use ($idCliente) {
+        return $cliente['ID'] != $idCliente;
+    });
+        $this->cerrarPopup();
+    }
+}
 
     public function render()
     {

@@ -1,7 +1,7 @@
 <div>
     <div class="grid grid-cols-3 gap-5">
         <!-- Primer contenedor -->
-        <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5">
+        <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 h-64">
     <form wire:submit.prevent="cargarArchivo">
         <div class="bg-gradient px-6 py-3 text-white rounded-md">
             <h2 class="text-lg font-semibold">Archivo: </h2>
@@ -23,7 +23,7 @@
 </div>
 
      <!-- Segundo contenedor mejorado -->
-     <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 overflow-hidden">
+     <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 overflow-hidden h-64">
         <div class="flex justify-between bg-gradient text-white px-6 py-3 rounded-md">
             <h2 class="text-lg font-semibold">Cliente a buscar</h2>
         </div>
@@ -73,64 +73,88 @@
     </div>
 
     @if($recibosCliente)
-    <div class="overflow-y-auto max-h-[300px]">
-        <table class="min-w-full overflow-y-auto max-h-[300px]">
-            <thead>
-                <tr class="bg-gray-100">
-                    <th class="border p-3 text-left">Fecha de Emisión</th>
-                    <th class="border p-3 text-left">Número de Recibo</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($recibosCliente as $recibo)
-                    <tr>
-                        @if(isset($recibo->CVE_FEMISION))
-                            <td class="border p-3 bg-gray-50">{{ date('d-m-Y', strtotime($recibo->CVE_FEMISION)) }}</td>
-                        @endif
-                        @if(isset($recibo->IdentComp))
-                        <td class="border p-3 bg-gray-50">{{ $recibo->IdentComp }}</td>
-                        @endif
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
-@endif
-
-
-    
-        <!-- Tercer contenedor mejorado -->
-        @if(count($sinFactura) > 0)
-<div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 overflow-hidden">
-    <div class="flex justify-between bg-gradient text-white px-6 py-3 rounded-md">
-        <h2 class="text-lg font-semibold">Clientes sin Recibo/factura</h2>
-    </div>
-
-    <div class="p-4">
-        @if(count($sinFactura) > 0)
-            <table class="min-w-full bg-white border border-gray-300 shadow-sm rounded-md">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Nombre</th>
-                        <!-- Agrega más columnas según sea necesario -->
-                    </tr>
-                </thead>
+        <div class="overflow-y-auto max-h-[300px]">
+            <table class="min-w-full overflow-y-auto max-h-[300px]">
+                @if(!$recibosCliente->isEmpty() && $recibosCliente != null)
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="border p-3 text-left">Fecha de Emisión</th>
+                            <th class="border p-3 text-left">Número de Recibo</th>
+                        </tr>
+                    </thead>
+                @endif
                 <tbody>
-                    @foreach($sinFactura as $cliente)
+                    @foreach($recibosCliente as $recibo)
                         <tr>
-                            <td>{{ $cliente['ID'] }}</td>
-                            <td>{{ $cliente['Nombre'] }}</td>
-                            <!-- Agrega más celdas según sea necesario -->
+                            @if(isset($recibo->CVE_FEMISION))
+                                <td class="border p-3 bg-gray-50">{{ date('d-m-Y', strtotime($recibo->CVE_FEMISION)) }}</td>
+                            @endif
+                            @if(isset($recibo->IdentComp))
+                                <td class="border p-3 bg-gray-50">{{ $recibo->IdentComp }}</td>
+                            @endif
                         </tr>
                     @endforeach
                 </tbody>
             </table>
-        @else
-            <p class="text-gray-600">Todos los clientes tienen facturas o recibos.</p>
-        @endif
+        </div>
+    @endif
+
+    @if(count($sinFactura) > 0)
+    <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 overflow-hidden" style="height: auto;">
+        <div class="flex justify-between bg-gradient text-white px-6 py-3 rounded-md">
+            <h2 class="text-lg font-semibold">Clientes sin Recibo/factura</h2>
+        </div>
+    
+        <div class="p-4 overflow-y-auto" style="max-height: 300px;"> <!-- Ajustar la altura máxima según sea necesario -->
+            <div class="overflow-x-auto">
+                <table id="tabla-sin-factura" class="min-w-full bg-white border border-gray-300 shadow-sm rounded-md">
+                    <thead class="bg-gray-200">
+                        <tr>
+                            <th class="px-4 py-2">ID</th>
+                            <th class="px-4 py-2">Nombre</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($sinFactura as $cliente)
+                            <tr wire:click="abrirPopup('{{ $cliente['ID'] }}')" onclick="highlightRow(this, 'tabla-sin-factura')" class="hover:bg-gray-100 cursor-pointer">
+                                <td class="px-4 py-2">{{ $cliente['ID'] }}</td>
+                                <td class="px-4 py-2">{{ $cliente['Nombre'] }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
-</div>
+@endif
+
+@if($mostrarPopUp)
+    <div class="popup-container">
+        <div class="popup">
+            <button class="close-popup-button" wire:click="cerrarPopup">Cerrar</button>
+            <h2 class="text-lg font-semibold">Facturas Libres del Cliente {{ $clienteSeleccionado }}</h2>
+            @if($facturasLibres->isEmpty())
+                <p>Este cliente no tiene facturas libres.</p>
+            @else
+                <table class="table-auto">
+                    <thead>
+                        <tr>
+                            <th class="px-4 py-2">Identificador de Factura</th>
+                            <th class="px-4 py-2">Fecha de Emisión</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($facturasLibres as $factura)
+                            <tr wire:click="seleccionarFactura('{{ $factura->IdentComp }}', '{{ $clienteSeleccionado }}')" class="cursor-pointer">
+                                <td class="border px-4 py-2">{{ $factura->IdentComp }}</td>
+                                <td class="border px-4 py-2">{{ \Carbon\Carbon::parse($factura->CVE_FEMISION)->format('Y-m-d') }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @endif
+        </div>
+    </div>
 @endif
 
     </div>
@@ -147,6 +171,12 @@
                     <button wire:click="descargarArchivoTxt" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 m-2 rounded-md mt-4">
                         Descargar Archivo
                     </button>
+                    <span wire:loading wire:target="descargarArchivoTxt" class="absolute right-2 bottom-2">
+                        <span class="cargando-icono"></span>
+                    </span>
+                    <span wire:loading wire:target="descargarNumerosExcel" class="absolute right-2 bottom-2">
+                        <span class="cargando-icono"></span>
+                    </span>
                 </div>
             @endif
         </div>                
@@ -203,6 +233,23 @@
         </div>
     </div> --}}
 </div>
+<script>
+    function highlightRow(row, tableId) {
+            // Quita la clase 'bg-gray-100' de todas las filas de la tabla
+            document.querySelectorAll('#' + tableId + ' tbody tr').forEach(function(row) {
+                row.classList.remove('bg-gray-100');
+            });
+
+            // Agrega la clase 'bg-gray-100' a la fila clicada
+            row.classList.add('bg-gray-100');
+        }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        Livewire.on('mostrarPopupFacturas', clienteId => {
+            Livewire.emit('mostrarPopupFacturas', clienteId);
+        });
+    });
+</script>
 {{-- <script>
     document.addEventListener('livewire:load', function () {
         Livewire.on('esperarYConsultar', function (idCliente) {
