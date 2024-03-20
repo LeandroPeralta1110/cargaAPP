@@ -165,6 +165,9 @@
             <h2 class="text-lg font-semibold">Contenido del Archivo</h2>
             @if($contenidoArchivo)
                 <div class="flex items-center"> <!-- Contenedor de los botones -->
+                    <button wire:click="reorganizarIndices" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 m-2 rounded-md mt-4">
+                        <i class="fas fa-sort-numeric-down"></i> <!-- Icono de Font Awesome para reorganizar índices -->
+                    </button>
                     <button wire:click="descargarNumerosExcel" class="bg-green-500 hover:bg-green-600 text-white mr-2 px-4 py-2 m-2 rounded-md mt-4">
                         Descargar Num. Recibos en Excel
                     </button>
@@ -175,6 +178,9 @@
                         <span class="cargando-icono"></span>
                     </span>
                     <span wire:loading wire:target="descargarNumerosExcel" class="absolute right-2 bottom-2">
+                        <span class="cargando-icono"></span>
+                    </span>
+                    <span wire:loading wire:target="reorganizarIndices" class="absolute right-2 bottom-2">
                         <span class="cargando-icono"></span>
                     </span>
                 </div>

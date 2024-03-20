@@ -298,7 +298,7 @@ protected function procesarArchivoExcel()
                         $cliente = $clienteCollection->first();
                         
                         $codCli = $cliente->cli_Cod;
-                        // Obtener la última factura del cliente para el mes y año de SERV.
+
                         $ultimaFacturaCliente = DB::table('dbo.QRY_VENTASCOBROS AS f')
                         ->select('f.CVE_FEMISION', 'f.IdentComp')
                         ->leftJoin('dbo.QRY_RELCOMPVENTAS AS r', function ($join) use ($codCli) {
@@ -312,6 +312,27 @@ protected function procesarArchivoExcel()
                         ->whereNull('r.IdentComp2') // Filtrar solo facturas sin recibo
                         ->orderBy('f.CVE_FEMISION', 'desc')
                         ->first();
+
+                        /* $ultimaFacturaCliente = DB::table('dbo.QRY_VENTASCOBROS AS f')
+                        ->select('f.CVE_FEMISION', 'f.IdentComp')
+                        ->leftJoin('dbo.QRY_RELCOMPVENTAS AS r', function ($join) use ($codCli) {
+                            $join->on('r.IdentComp1', '=', 'f.IdentComp')
+                                ->where('r.cve_CodCli1', '=', $codCli);
+                        })
+                        ->where('f.CVECLI_CODIN', $cliente->cli_Cod)
+                        ->where('f.IdentComp', 'like', 'FC%')
+                        ->whereYear('f.CVE_FEMISION', $anioServ)
+                        ->whereMonth('f.CVE_FEMISION', $mesServ)
+                        ->whereNull('r.IdentComp2') // Facturas sin recibo
+                        ->whereExists(function ($query) use ($codCli) {
+                            $query->select(DB::raw(1))
+                                ->from('dbo.QRY_RELCOMPVENTAS')
+                                ->whereRaw('IdentComp1 = f.IdentComp')
+                                ->where('cve_CodCli1', '=', $codCli)
+                                ->where('cve_SaldoMonCC1', '>', 0);
+                        })
+                        ->orderBy('f.CVE_FEMISION', 'desc')
+                        ->first(); */
                         
                         /* DB::table('dbo.QRY_VENTASCOBROS AS f')
                         ->select('f.CVE_FEMISION', 'f.IdentComp')
@@ -328,8 +349,6 @@ protected function procesarArchivoExcel()
                         ->orderBy('f.CVE_FEMISION', 'desc')
                         ->first(); */
 
-                        
-                        
                         /* DB::table('dbo.QRY_VENTASCOBROS')
                             ->select('CVE_FEMISION', 'IdentComp')
                             ->where('CVECLI_CODIN', $cliente->cli_Cod)
@@ -448,9 +467,21 @@ protected function procesarArchivoExcel()
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Agregar los números generados a la hoja de cálculo
-        foreach ($this->numerosGenerados as $index => $numero) {
-            $sheet->setCellValue('A' . ($index + 1), $numero);
+        // Obtener los números de recibo asignados a cada cliente según el orden en $this->contenidoArchivo
+        $numerosRecibo = [];
+        foreach ($this->contenidoArchivo as $index => $cliente) {
+            // Extraer el número de recibo del campo "ULTIMO_RECIBO_IDENTCOMP"
+            $ultimoReciboIdentcomp = $cliente['ULTIMO_RECIBO_IDENTCOMP'];
+            preg_match('/\d+$/', $ultimoReciboIdentcomp, $matches);
+            $numeroRecibo = ltrim($matches[0], '0'); // Eliminar ceros iniciales
+
+            // Almacenar el número de recibo en el array en el mismo orden que $this->contenidoArchivo
+            $numerosRecibo[] = $numeroRecibo;
+        }
+
+        // Agregar los números de recibo a la hoja de cálculo en el mismo orden que $this->contenidoArchivo
+        foreach ($numerosRecibo as $index => $numeroRecibo) {
+            $sheet->setCellValue('A' . ($index + 1), $numeroRecibo);
         }
 
         // Crear el archivo Excel en un directorio temporal
@@ -462,11 +493,11 @@ protected function procesarArchivoExcel()
         return response()->download($tempFilePath, 'numeros_generados.xlsx')->deleteFileAfterSend(true);
     }
 
-public function descargarArchivoNumeros($tempFilePath)
-{
-    // Descargar el archivo Excel como respuesta
-    return response()->download($tempFilePath, 'numeros_generados.xlsx')->deleteFileAfterSend(true);
-}
+    public function descargarArchivoNumeros($tempFilePath)
+    {
+        // Descargar el archivo Excel como respuesta
+        return response()->download($tempFilePath, 'numeros_generados.xlsx')->deleteFileAfterSend(true);
+    }
     public function consultarBase($id){
         // Obtener la informacion del cliente por su id
         $query = DB::table('clientes')->where('cli_Cod','=',$id)->get();
@@ -790,7 +821,7 @@ public function descargarArchivoNumeros($tempFilePath)
     public function abrirPopup($clienteId)
     {
         $this->clienteSeleccionado = $clienteId;
-
+    
         // Obtener las facturas libres del cliente seleccionado
         $this->facturasLibres = DB::table('dbo.QRY_VENTASCOBROS AS f')
             ->select('f.CVE_FEMISION', 'f.IdentComp')
@@ -801,9 +832,13 @@ public function descargarArchivoNumeros($tempFilePath)
             ->where('f.CVECLI_CODIN', $clienteId)
             ->where('f.IdentComp', 'like', 'FC%')
             ->whereNull('r.IdentComp2') // Filtrar solo facturas sin recibo
+            ->orWhere(function ($query) use ($clienteId) {
+                $query->where('r.cve_CodCli1', '=', $clienteId)
+                    ->where('r.cve_SaldoMonCC1', '>', 0);
+            })
             ->orderBy('f.CVE_FEMISION', 'desc')
             ->get();
-
+    
         $this->mostrarPopUp = true;
     }
 
@@ -819,7 +854,7 @@ public function descargarArchivoNumeros($tempFilePath)
                                 ->first();
     
         $clienteNum = ltrim(strval($idCliente), '0');
-    
+        
         // Verificar si $this->archivo es un array antes de iterarlo
         if ($this->archivo) {
             // Utilizar PhpSpreadsheet para cargar el archivo Excel
@@ -834,52 +869,57 @@ public function descargarArchivoNumeros($tempFilePath)
             // Avanzar al siguiente fila para omitir la primera fila de encabezados
             $rowIterator->next();
         
-      // Iterar sobre las filas
-foreach ($rowIterator as $row) {
-    // Inicializar la bandera que indica si el cliente tiene factura
-    $clienteTieneFactura = true;
+            // Iterar sobre las filas
+            $index = 0; // Inicializamos el índice de la fila fuera del bucle interno
+            foreach ($rowIterator as $row) {
+                $cellIterator = $row->getCellIterator();
+                $cellIterator->setIterateOnlyExistingCells(false); // Permitir celdas vacías
 
-    $cellIterator = $row->getCellIterator();
-    $cellIterator->setIterateOnlyExistingCells(FALSE); // Permitir celdas vacías
+                $rowContent = [];
+                foreach ($cellIterator as $cell) {
+                    // Establecer el formato de la celda para la columna "SERV."
+                    if ($index === 0) { // Ajusta el índice según la posición de la columna "SERV."
+                        $cell->getStyle()->getNumberFormat()->setFormatCode('mmm-yy'); // Establecer el formato de fecha
+                    }
+                    
+                    // Obtener el valor de la celda formateado
+                    $value = $cell->getFormattedValue();
+                    // Añadir el valor a $rowContent
+                    $rowContent[] = $value;
+                }
 
-    $rowContent = [];
-    foreach ($cellIterator as $index => $cell) {
-        // Establecer el formato de la celda para la columna "SERV."
-        if ($index === 0) { // Ajusta el índice según la posición de la columna "SERV."
-            $cell->getStyle()->getNumberFormat()->setFormatCode('mmm-yy'); // Establecer el formato de fecha
+                // Obtener el valor de "ID" y convertirlo a string
+                $clienteId = strval($rowContent[7]);
+
+                // Verificar si el ID del cliente en el archivo coincide con el ID del cliente específico
+                if ($clienteId === $clienteNum) {
+                    // Calculamos la posición del cliente ajustada para excluir la fila de la cabecera
+                    $clientePosition = $index; // Restamos 1 para excluir la fila de la cabecera
+                    $servicio = $rowContent[0]; // Ajusta el índice según el formato de tu archivo Excel
+                    $impacta = $rowContent[1]; // Ajusta el índice según el formato de tu archivo Excel
+                    $email = $rowContent[2]; // Ajusta el índice según el formato de tu archivo Excel
+                    $suscripcion = $rowContent[3]; // Ajusta el índice según el formato de tu archivo Excel
+                    $operacion = $rowContent[4]; // Ajusta el índice según el formato de tu archivo Excel
+                    $importe = $rowContent[5]; // Ajusta el índice según el formato de tu archivo Excel
+                    $importe = str_replace('$ ', '', $importe);
+                    $pago = $rowContent[6];
+                    break;
+                }
+                
+                $index++; // Incrementamos el índice de la fila
+            }
         }
         
-        // Obtener el valor de la celda formateado
-        $value = $cell->getFormattedValue();
-        // Añadir el valor a $rowContent
-        $rowContent[] = $value;
-    }
-   
-    // Obtener el valor de "ID" y convertirlo a string
-    $clienteId = strval($rowContent[7]);
-
-    // Verificar si el ID del cliente en el archivo coincide con el ID del cliente específico
-    if ($clienteId === $clienteNum) {
-        // Aquí puedes acceder a los datos correspondientes al cliente específico
-        $servicio = $rowContent[0]; // Ajusta el índice según el formato de tu archivo Excel
-        $impacta = $rowContent[1]; // Ajusta el índice según el formato de tu archivo Excel
-        $email = $rowContent[2]; // Ajusta el índice según el formato de tu archivo Excel
-        $suscripcion = $rowContent[3]; // Ajusta el índice según el formato de tu archivo Excel
-        $operacion = $rowContent[4]; // Ajusta el índice según el formato de tu archivo Excel
-        $importe = $rowContent[5]; // Ajusta el índice según el formato de tu archivo Excel
-        $importe = str_replace('$ ', '', $importe);
-        $pago = $rowContent[6];
-    }
-}
-        }
-
     if ($facturaSeleccionada) {
         // Obtener el último número registrado en $this->numerosGenerados
         $ultimoNumeroReciboGeneral = end($this->numerosGenerados);
-        
+
         // Sumar 1 al último número de recibo generado
         $nuevoNumeroRecibo = $ultimoNumeroReciboGeneral + 1;
 
+        // Si $clientePosition no está definido, simplemente agregamos el nuevo número de recibo al final de $this->numerosGenerados
+        $this->numerosGenerados[] = $nuevoNumeroRecibo;
+        
         // Obtener los datos del cliente
         $clienteCollection = $this->consultarBase($idCliente);
         $cliente = $clienteCollection->first();
@@ -934,33 +974,83 @@ foreach ($rowIterator as $row) {
 
         $fechaFormateadaPago = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s.u', $facturaSeleccionada->CVE_FEMISION)->format('Ymd');
 
-// Agregar los datos del cliente y la factura al array $rowContent
-$rowContent = [
-    'SERV.' => $fechaFormateada,
-            'IMPACTA' => $impacta,
-            'CLIENTE' => $email,
-            'SUSCRIPCION' => $suscripcion, // Aquí debes obtener el dato correspondiente del archivo proporcionado por el usuario
-            'OPERACIÓN' => $operacion, // Aquí debes obtener el dato correspondiente del archivo proporcionado por el usuario
-            'IMPORTE' => $importe, // Aquí debes obtener el dato correspondiente del archivo proporcionado por el usuario
-            'PAGO' => $pago, // Aquí debes obtener el dato correspondiente del archivo proporcionado por el usuario
-            'ID' => $cliente->cli_Cod,
-            'CUIT' => $cliente->cli_CUIT,
-            'RSOC' => $cliente->cli_RazSoc, 
-            'DIRECCION' => $direccion,
-            'LOCALIDAD' => $localidad,
-            'ULTIMA_FACTURA' => $fechaFormateadaPago, 
-            'ULTIMO_RECIBO_IDENTCOMP' => $nuevoIdentComp, // Aquí debes generar el nuevo identificador del recibo
-            'ULTIMA_FACTURA_IDENTCOMP' => $facturaSeleccionada->IdentComp,
-            'Columna_I' => '', // Aquí debes obtener el dato correspondiente del archivo proporcionado por el usuario
-        ];
+    // Agregar los datos del cliente y la factura al array $rowContent
+    $rowContent = [
+        'SERV.' => $fechaFormateada,
+        'IMPACTA' => $impacta ?? '', // Valor predeterminado si $impacta no está definido
+        'CLIENTE' => $email ?? '', // Valor predeterminado si $email no está definido
+        'SUSCRIPCION' => $suscripcion ?? '', // Valor predeterminado si $suscripcion no está definido
+        'OPERACIÓN' => $operacion ?? '', // Valor predeterminado si $operacion no está definido
+        'IMPORTE' => $importe ?? '', // Valor predeterminado si $importe no está definido
+        'PAGO' => $pago ?? '', // Valor predeterminado si $pago no está definido
+        'ID' => $cliente->cli_Cod ?? '', // Valor predeterminado si $cliente->cli_Cod no está definido
+        'CUIT' => $cliente->cli_CUIT ?? '', // Valor predeterminado si $cliente->cli_CUIT no está definido
+        'RSOC' => $cliente->cli_RazSoc ?? '', // Valor predeterminado si $cliente->cli_RazSoc no está definido
+        'DIRECCION' => $direccion ?? '', // Valor predeterminado si $direccion no está definido
+        'LOCALIDAD' => $localidad ?? '', // Valor predeterminado si $localidad no está definido
+        'ULTIMA_FACTURA' => $fechaFormateadaPago ?? '', // Valor predeterminado si $fechaFormateadaPago no está definido
+        'ULTIMO_RECIBO_IDENTCOMP' => $nuevoIdentComp ?? '', // Valor predeterminado si $nuevoIdentComp no está definido
+        'ULTIMA_FACTURA_IDENTCOMP' => $facturaSeleccionada->IdentComp ?? '', // Valor predeterminado si $facturaSeleccionada->IdentComp no está definido
+        'Columna_I' => '', // Aquí debes obtener el dato correspondiente del archivo proporcionado por el usuario
+    ];
 
-        // Agregar los datos al archivo contenidoArchivo
+    if (isset($clientePosition)) {
+        // Insertar los datos en la posición $clientePosition en $this->contenidoArchivo
+        array_splice($this->contenidoArchivo, $clientePosition, 0, [$rowContent]);
+    } else {
+        // Si $clientePosition no está definido, simplemente agregamos los datos al final de $this->contenidoArchivo
         $this->contenidoArchivo[] = $rowContent;
+    }
         // Eliminar el cliente seleccionado de la lista de clientes sin factura
     $this->sinFactura = array_filter($this->sinFactura, function ($cliente) use ($idCliente) {
         return $cliente['ID'] != $idCliente;
     });
         $this->cerrarPopup();
+    }
+}
+
+public function reorganizarIndices()
+{
+    // Verificar si $this->archivo es un array antes de iterarlo
+    if ($this->archivo) {
+        // Utilizar PhpSpreadsheet para cargar el archivo Excel
+        $spreadsheet = IOFactory::load($this->archivo->getRealPath());
+
+        // Obtener la hoja activa del archivo Excel
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Obtener el iterador de filas
+        $rowIterator = $sheet->getRowIterator();
+
+        // Avanzar al siguiente fila para omitir la primera fila de encabezados
+        $rowIterator->next();
+
+        // Crear un array para almacenar las posiciones de los clientes en el archivo
+        $posicionesClientes = [];
+
+        // Iterar sobre las filas del archivo para obtener las posiciones de los clientes
+        foreach ($rowIterator as $index => $row) {
+            // Obtener el valor del ID del cliente en la columna correspondiente (ajusta según tu archivo)
+            $clienteId = $sheet->getCell('H' . $index)->getValue(); // Suponiendo que el ID del cliente está en la columna H
+
+            // Buscar la posición del cliente en $this->contenidoArchivo[]
+            foreach ($this->contenidoArchivo as $indice => $contenido) {
+                if ($contenido['ID'] == $clienteId) {
+                    // Almacenar la posición del cliente en el array de posiciones
+                    $posicionesClientes[$clienteId] = $indice;
+                    break;
+                }
+            }
+        }
+
+        // Reorganizar $this->contenidoArchivo[] según las posiciones de los clientes en $posicionesClientes
+        $contenidoArchivoReorganizado = [];
+        foreach ($posicionesClientes as $clienteId => $posicion) {
+            $contenidoArchivoReorganizado[] = $this->contenidoArchivo[$posicion];
+        }
+
+        // Actualizar $this->contenidoArchivo[] con la nueva organización
+        $this->contenidoArchivo = $contenidoArchivoReorganizado;
     }
 }
 
