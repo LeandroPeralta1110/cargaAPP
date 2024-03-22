@@ -116,7 +116,7 @@
                     </thead>
                     <tbody>
                         @foreach($sinFactura as $cliente)
-                            <tr wire:click="abrirPopup('{{ $cliente['ID'] }}')" onclick="highlightRow(this, 'tabla-sin-factura')" class="hover:bg-gray-100 cursor-pointer">
+                            <tr wire:click="abrirPopup('{{ $cliente['ID'] }}','{{$cliente['ID_POSICION']}}')" onclick="highlightRow(this, 'tabla-sin-factura')" class="hover:bg-gray-100 cursor-pointer">
                                 <td class="px-4 py-2">{{ $cliente['ID'] }}</td>
                                 <td class="px-4 py-2">{{ $cliente['Nombre'] }}</td>
                             </tr>
@@ -130,13 +130,20 @@
 
 @if($mostrarPopUp)
     <div class="popup-container">
-        <div class="popup">
+        <div class="popup relative"> <!-- Agregamos relative para que el position absolute funcione correctamente -->
+            <!-- Icono de carga -->
+            <span wire:loading wire:target="seleccionarFactura" class="absolute top-2 right-2">
+                <span class="cargando-icono"></span>
+            </span>
+            <!-- Botón de cierre -->
             <button class="close-popup-button" wire:click="cerrarPopup">Cerrar</button>
+            <!-- Título -->
             <h2 class="text-lg font-semibold">Facturas Libres del Cliente {{ $clienteSeleccionado }}</h2>
+            <!-- Contenido de la tabla -->
             @if($facturasLibres->isEmpty())
                 <p>Este cliente no tiene facturas libres.</p>
             @else
-                <table class="table-auto">
+                <table id="facturas-libres" class="table-auto">
                     <thead>
                         <tr>
                             <th class="px-4 py-2">Identificador de Factura</th>
@@ -145,9 +152,9 @@
                     </thead>
                     <tbody>
                         @foreach ($facturasLibres as $factura)
-                            <tr wire:click="seleccionarFactura('{{ $factura->IdentComp }}', '{{ $clienteSeleccionado }}')" class="cursor-pointer">
+                            <tr onmouseover="highlightRowTable(this)" onmouseout="unhighlightRow(this)" wire:click="seleccionarFactura('{{ $factura->IdentComp }}', '{{ $clienteSeleccionado }}','{{$idPosicionCli}}')"  class="cursor-pointer {{ $factura->cve_SaldoMonCC1 > 0 ? 'factura-con-saldo-pendiente' : '' }}">
                                 <td class="border px-4 py-2">{{ $factura->IdentComp }}</td>
-                                <td class="border px-4 py-2">{{ \Carbon\Carbon::parse($factura->CVE_FEMISION)->format('Y-m-d') }}</td>
+                                <td class="border px-4 py-2">{{ \Carbon\Carbon::parse($factura->CVE_FEMISION)->format('d-m-Y') }}</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -249,6 +256,14 @@
             // Agrega la clase 'bg-gray-100' a la fila clicada
             row.classList.add('bg-gray-100');
         }
+
+        function highlightRowTable(row) {
+        row.classList.add('bg-gray-100');
+    }
+
+    function unhighlightRow(row) {
+        row.classList.remove('bg-gray-100');
+    }
 
     document.addEventListener('DOMContentLoaded', function () {
         Livewire.on('mostrarPopupFacturas', clienteId => {

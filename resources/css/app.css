@@ -117,3 +117,12 @@ html {
     50% { transform: rotateY(90deg); }
     100% { transform: rotateY(0deg); }
 }
+
+.factura-con-saldo-pendiente {
+    background-color: #ffcccc; /* Cambia el color de fondo */
+}
+
+.factura-con-saldo-pendiente .icono-saldo-pendiente::before {
+    content: "\u26A0"; /* Agrega un icono de advertencia */
+    color: red;
+}

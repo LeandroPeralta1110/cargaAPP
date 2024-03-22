@@ -37,6 +37,7 @@ class Cobranzas extends Component
     public $clienteSeleccionado;
     public $mostrarPopUp;
     public $facturasLibres;
+    public $idPosicionCli;
 
     public function mount()
     {
@@ -249,6 +250,8 @@ protected function procesarArchivoExcel()
     $ultimoNumeroReciboPorCliente = [];
     $this->sinFactura = [];
 
+    $idPosicion = 1; // Inicializar el contador de posición
+
     foreach ($sheet->getRowIterator() as $row) {
         // Inicializar la bandera que indica si el cliente tiene factura
         $clienteTieneFactura = true;
@@ -365,8 +368,9 @@ protected function procesarArchivoExcel()
                             $this->sinFactura[] = [
                                 'ID' => $idCliente,
                                 'Nombre' => optional($cliente)->cli_RazSoc,  // Puedes ajustar el campo Nombre según tu estructura de datos
+                                'ID_POSICION' => $idPosicion
                             ];
-
+                            $idPosicion++;
                             break;
                         }
 
@@ -418,7 +422,9 @@ protected function procesarArchivoExcel()
                                 'ULTIMA_FACTURA' => $fechaFormateada,
                                 'ULTIMO_RECIBO_IDENTCOMP' => $ultimaFacturaIdentComp,
                                 'ULTIMA_FACTURA_IDENTCOMP' => $ultimaFactura,
+                                'ID_POSICION' => $idPosicion
                             ]);
+                            $idPosicion++;
                         }
                     }
                 }
@@ -438,7 +444,7 @@ protected function procesarArchivoExcel()
             $contenido[] = array_merge($rowContent);
         }
     }  
-   
+  
     // Después de procesar todos los clientes, generamos el archivo Excel con los números generados
     $spreadsheet = new Spreadsheet();
     $sheet = $spreadsheet->getActiveSheet();
@@ -818,13 +824,14 @@ protected function procesarArchivoExcel()
         $zip->addFile($archivoTemporal, $nombreArchivo);
     }
 
-    public function abrirPopup($clienteId)
+    public function abrirPopup($clienteId, $idPosicion)
     {
         $this->clienteSeleccionado = $clienteId;
-    
+        $this->idPosicionCli = $idPosicion;
+
         // Obtener las facturas libres del cliente seleccionado
         $this->facturasLibres = DB::table('dbo.QRY_VENTASCOBROS AS f')
-            ->select('f.CVE_FEMISION', 'f.IdentComp')
+            ->select('f.CVE_FEMISION', 'f.IdentComp', 'r.cve_SaldoMonCC1')
             ->leftJoin('dbo.QRY_RELCOMPVENTAS AS r', function ($join) use ($clienteId) {
                 $join->on('r.IdentComp1', '=', 'f.IdentComp')
                      ->where('r.cve_CodCli1', '=', $clienteId);
@@ -846,7 +853,7 @@ protected function procesarArchivoExcel()
         $this->mostrarPopUp = false;
     }
 
-    public function seleccionarFactura($identificadorFactura, $idCliente)
+    public function seleccionarFactura($identificadorFactura, $idCliente, $idPosicion)
     {
         // Obtener los datos de la factura seleccionada
         $facturaSeleccionada = DB::table('dbo.QRY_VENTASCOBROS')
@@ -992,6 +999,7 @@ protected function procesarArchivoExcel()
         'ULTIMO_RECIBO_IDENTCOMP' => $nuevoIdentComp ?? '', // Valor predeterminado si $nuevoIdentComp no está definido
         'ULTIMA_FACTURA_IDENTCOMP' => $facturaSeleccionada->IdentComp ?? '', // Valor predeterminado si $facturaSeleccionada->IdentComp no está definido
         'Columna_I' => '', // Aquí debes obtener el dato correspondiente del archivo proporcionado por el usuario
+        'ID_POSICION' => $idPosicion
     ];
 
     if (isset($clientePosition)) {
@@ -1002,57 +1010,29 @@ protected function procesarArchivoExcel()
         $this->contenidoArchivo[] = $rowContent;
     }
         // Eliminar el cliente seleccionado de la lista de clientes sin factura
-    $this->sinFactura = array_filter($this->sinFactura, function ($cliente) use ($idCliente) {
-        return $cliente['ID'] != $idCliente;
-    });
+        foreach ($this->sinFactura as $key => $cliente) {
+            if ($cliente['ID'] == $idCliente) {
+                // Eliminar el elemento del array usando unset
+                unset($this->sinFactura[$key]);
+                // Romper el bucle una vez que se haya eliminado el elemento
+                break;
+            }
+        }
+
         $this->cerrarPopup();
     }
 }
 
-public function reorganizarIndices()
-{
-    // Verificar si $this->archivo es un array antes de iterarlo
-    if ($this->archivo) {
-        // Utilizar PhpSpreadsheet para cargar el archivo Excel
-        $spreadsheet = IOFactory::load($this->archivo->getRealPath());
-
-        // Obtener la hoja activa del archivo Excel
-        $sheet = $spreadsheet->getActiveSheet();
-
-        // Obtener el iterador de filas
-        $rowIterator = $sheet->getRowIterator();
-
-        // Avanzar al siguiente fila para omitir la primera fila de encabezados
-        $rowIterator->next();
-
-        // Crear un array para almacenar las posiciones de los clientes en el archivo
-        $posicionesClientes = [];
-
-        // Iterar sobre las filas del archivo para obtener las posiciones de los clientes
-        foreach ($rowIterator as $index => $row) {
-            // Obtener el valor del ID del cliente en la columna correspondiente (ajusta según tu archivo)
-            $clienteId = $sheet->getCell('H' . $index)->getValue(); // Suponiendo que el ID del cliente está en la columna H
-
-            // Buscar la posición del cliente en $this->contenidoArchivo[]
-            foreach ($this->contenidoArchivo as $indice => $contenido) {
-                if ($contenido['ID'] == $clienteId) {
-                    // Almacenar la posición del cliente en el array de posiciones
-                    $posicionesClientes[$clienteId] = $indice;
-                    break;
-                }
-            }
+    public function reorganizarIndices()
+    {
+        // Verificar si $this->contenidoArchivo es un array antes de iterarlo
+        if (is_array($this->contenidoArchivo)) {
+            // Ordenar el array por la columna ID_POSICION
+            usort($this->contenidoArchivo, function ($a, $b) {
+                return $a['ID_POSICION'] <=> $b['ID_POSICION'];
+            });
         }
-
-        // Reorganizar $this->contenidoArchivo[] según las posiciones de los clientes en $posicionesClientes
-        $contenidoArchivoReorganizado = [];
-        foreach ($posicionesClientes as $clienteId => $posicion) {
-            $contenidoArchivoReorganizado[] = $this->contenidoArchivo[$posicion];
-        }
-
-        // Actualizar $this->contenidoArchivo[] con la nueva organización
-        $this->contenidoArchivo = $contenidoArchivoReorganizado;
     }
-}
 
     public function render()
     {
