@@ -100,32 +100,43 @@
     @endif
 
     @if(count($sinFactura) > 0)
-    <div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 overflow-hidden" style="height: auto;">
-        <div class="flex justify-between bg-gradient text-white px-6 py-3 rounded-md">
-            <h2 class="text-lg font-semibold">Clientes sin Recibo/factura</h2>
-        </div>
-    
-        <div class="p-4 overflow-y-auto" style="max-height: 300px;"> <!-- Ajustar la altura máxima según sea necesario -->
-            <div class="overflow-x-auto">
-                <table id="tabla-sin-factura" class="min-w-full bg-white border border-gray-300 shadow-sm rounded-md">
-                    <thead class="bg-gray-200">
-                        <tr>
-                            <th class="px-4 py-2">ID</th>
-                            <th class="px-4 py-2">Nombre</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($sinFactura as $cliente)
-                            <tr wire:click="abrirPopup('{{ $cliente['ID'] }}','{{$cliente['ID_POSICION']}}')" onclick="highlightRow(this, 'tabla-sin-factura')" class="hover:bg-gray-100 cursor-pointer">
-                                <td class="px-4 py-2">{{ $cliente['ID'] }}</td>
-                                <td class="px-4 py-2">{{ $cliente['Nombre'] }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+<div class="flex-1 fondocolor rounded-lg shadow-lg mx-5 overflow-hidden" style="height: auto;">
+    <div class="flex justify-between bg-gradient text-white px-6 py-3 rounded-md">
+        <h2 class="text-lg font-semibold">Clientes sin Recibo/factura</h2>
+    </div>
+
+    <div class="p-4 overflow-y-auto" style="max-height: 300px;">
+        <div class="overflow-x-auto">
+            <table id="tabla-sin-factura" class="min-w-full bg-white border border-gray-300 shadow-sm rounded-md">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="px-4 py-2">ID</th>
+                        <th class="px-4 py-2">Nombre</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($sinFactura as $index => $cliente)
+                    <tr wire:key="{{ $index }}" 
+                        wire:click="abrirPopup('{{ $cliente['ID'] }}','{{$cliente['ID_POSICION']}}')" 
+                        onclick="highlightRow(this, 'tabla-sin-factura')" 
+                        class="hover:bg-gray-100 cursor-pointer"
+                        wire:loading.class="opacity-50"
+                        wire:loading.class.remove="opacity-50"
+                    >
+                        <td class="px-4 py-2">{{ $cliente['ID'] }}</td>
+                        <td class="relative px-4 py-2">
+                            {{ $cliente['Nombre'] }}
+                            <span wire:loading wire:target="abrirPopup('{{ $cliente['ID'] }}','{{$cliente['ID_POSICION']}}')" class="absolute right-2 bottom-2">
+                                <span class="cargando-icono"></span>
+                            </span>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
     </div>
+</div>
 @endif
 
 @if($mostrarPopUp)

@@ -861,47 +861,43 @@ protected function procesarArchivoExcel()
                                 ->first();
     
         $clienteNum = ltrim(strval($idCliente), '0');
-        
+        $idPosicion += 1;
         // Verificar si $this->archivo es un array antes de iterarlo
         if ($this->archivo) {
             // Utilizar PhpSpreadsheet para cargar el archivo Excel
             $spreadsheet = IOFactory::load($this->archivo->getRealPath());
-        
+
             // Obtener la hoja activa del archivo Excel
             $sheet = $spreadsheet->getActiveSheet();
-        
+
             // Obtener el iterador de filas
             $rowIterator = $sheet->getRowIterator();
-        
+
             // Avanzar al siguiente fila para omitir la primera fila de encabezados
             $rowIterator->next();
-        
+
             // Iterar sobre las filas
-            $index = 0; // Inicializamos el índice de la fila fuera del bucle interno
+            $index = 1; // Inicializamos el índice de la fila fuera del bucle interno
             foreach ($rowIterator as $row) {
-                $cellIterator = $row->getCellIterator();
-                $cellIterator->setIterateOnlyExistingCells(false); // Permitir celdas vacías
+                // Solo procesar la fila cuando el índice coincida con $idPosicion
+                if ($index === $idPosicion) {
+                    $cellIterator = $row->getCellIterator();
+                    $cellIterator->setIterateOnlyExistingCells(false); // Permitir celdas vacías
 
-                $rowContent = [];
-                foreach ($cellIterator as $cell) {
-                    // Establecer el formato de la celda para la columna "SERV."
-                    if ($index === 0) { // Ajusta el índice según la posición de la columna "SERV."
-                        $cell->getStyle()->getNumberFormat()->setFormatCode('mmm-yy'); // Establecer el formato de fecha
+                    $rowContent = [];
+                    foreach ($cellIterator as $cell) {
+                        // Establecer el formato de la celda para la columna "SERV."
+                        if ($index === 0) { // Ajusta el índice según la posición de la columna "SERV."
+                            $cell->getStyle()->getNumberFormat()->setFormatCode('mmm-yy'); // Establecer el formato de fecha
+                        }
+
+                        // Obtener el valor de la celda formateado
+                        $value = $cell->getFormattedValue();
+                        // Añadir el valor a $rowContent
+                        $rowContent[] = $value;
                     }
-                    
-                    // Obtener el valor de la celda formateado
-                    $value = $cell->getFormattedValue();
-                    // Añadir el valor a $rowContent
-                    $rowContent[] = $value;
-                }
 
-                // Obtener el valor de "ID" y convertirlo a string
-                $clienteId = strval($rowContent[7]);
-
-                // Verificar si el ID del cliente en el archivo coincide con el ID del cliente específico
-                if ($clienteId === $clienteNum) {
-                    // Calculamos la posición del cliente ajustada para excluir la fila de la cabecera
-                    $clientePosition = $index; // Restamos 1 para excluir la fila de la cabecera
+                    // Obtener los datos necesarios de la fila
                     $servicio = $rowContent[0]; // Ajusta el índice según el formato de tu archivo Excel
                     $impacta = $rowContent[1]; // Ajusta el índice según el formato de tu archivo Excel
                     $email = $rowContent[2]; // Ajusta el índice según el formato de tu archivo Excel
@@ -910,9 +906,9 @@ protected function procesarArchivoExcel()
                     $importe = $rowContent[5]; // Ajusta el índice según el formato de tu archivo Excel
                     $importe = str_replace('$ ', '', $importe);
                     $pago = $rowContent[6];
-                    break;
+                    break; // Salir del bucle una vez que se han obtenido los datos necesarios
                 }
-                
+
                 $index++; // Incrementamos el índice de la fila
             }
         }
@@ -1001,7 +997,7 @@ protected function procesarArchivoExcel()
         'Columna_I' => '', // Aquí debes obtener el dato correspondiente del archivo proporcionado por el usuario
         'ID_POSICION' => $idPosicion
     ];
-
+    
     if (isset($clientePosition)) {
         // Insertar los datos en la posición $clientePosition en $this->contenidoArchivo
         array_splice($this->contenidoArchivo, $clientePosition, 0, [$rowContent]);
